@@ -98,8 +98,9 @@ module emu
     // 1 - D-/TX
     // 2..6 - USR2..USR6
     // Set USER_OUT to 1 to read from USER_IN.
-    input   [6:0] USER_IN,
-    output  [6:0] USER_OUT
+    output	      USER_MODE,	 
+    input   [7:0] USER_IN,
+    output  [7:0] USER_OUT
     `ifdef SIMULATION
     ,output         sim_pxl_cen,
     output          sim_pxl_clk,
@@ -135,6 +136,7 @@ localparam CONF_STR = {
     `ifdef HAS_TESTMODE
     "O6,Test mode,OFF,ON;",
     `endif
+	 "OUV,Serial SNAC DB9MD,Off,1 Player,2 Players;",	 
     `ifdef JT12
     "O7,PSG,ON,OFF;",
     "O8,FM ,ON,OFF;",
@@ -157,7 +159,11 @@ assign VGA_F1=1'b0;
 wire   field;
 assign VGA_F1=field;
 `endif
-assign USER_OUT  = 7'd1;
+
+wire   joy_split, joy_mdsel;
+wire   [5:0] joy_in = {USER_IN[6],USER_IN[3],USER_IN[5],USER_IN[7],USER_IN[1],USER_IN[2]};
+assign USER_OUT  = |status[31:30] ? {3'b111,joy_split,3'b111,joy_mdsel} : '1;
+assign USER_MODE = |status[31:30] ;
 
 ////////////////////   CLOCKS   ///////////////////
 
@@ -360,6 +366,10 @@ u_frame(
     .scan2x_clk     ( VGA_CLK        ),
     .scan2x_cen     ( VGA_CE         ),
     .scan2x_de      ( VGA_DE         ),
+	 //DB15
+	 .joy_split(joy_split),
+	 .joy_mdsel(joy_mdsel),
+	 .joy_in(joy_in),
     // Debug
     .gfx_en         ( gfx_en         )
 );
