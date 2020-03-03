@@ -152,5 +152,10 @@ always @(posedge clk or negedge rst_n) begin
     end
 end
 
+`ifdef SIMULATION
+// Count how often there are delays because of ROM waits
+integer misses=0;
+always @(posedge cen_in) if(!gate) misses<=misses+1;
+`endif
 
 endmodule // jtframe_z80wait
