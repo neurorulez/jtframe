@@ -98,6 +98,7 @@ module emu
     // 1 - D-/TX
     // 2..6 - USR2..USR6
     // Set USER_OUT to 1 to read from USER_IN.
+    output  	  USER_OSD,
 	output		  USER_MODE,
     input   [6:0] USER_IN,
     output  [6:0] USER_OUT
@@ -150,7 +151,8 @@ localparam CONF_STR = {
         `endif
     `endif
     `SEPARATOR
-    `CORE_OSD
+    //`CORE_OSD
+	 "DIP;",
     `SEPARATOR
     "R0,Reset;",
     `CORE_KEYMAP
@@ -220,6 +222,7 @@ wire       dip_pause, dip_flip, dip_test;
 wire        ioctl_wr;
 wire [22:0] ioctl_addr;
 wire [ 7:0] ioctl_data;
+wire [ 7:0] ioctl_index;
 
 wire [ 9:0] game_joy1, game_joy2;
 wire [ 1:0] game_coin, game_start;
@@ -228,6 +231,8 @@ wire [ 3:0] gfx_en;
 wire        downloading, game_rst, rst, rst_n, dwnld_busy;
 wire        rst_req   = RESET | status[0] | buttons[1];
 
+reg [7:0] dsw[8];
+always @(posedge clk_sys) if (ioctl_wr && (ioctl_index==254) && !ioctl_addr[21:3]) dsw[ioctl_addr[2:0]] <= ioctl_data;
 
 assign LED_DISK  = 2'b0;
 assign LED_POWER = 2'b0;
@@ -322,7 +327,8 @@ u_frame(
     .SDRAM_BA       ( SDRAM_BA       ),
     .SDRAM_CKE      ( SDRAM_CKE      ),
     // ROM load
-    .ioctl_addr     ( ioctl_addr     ),
+ 	 .ioctl_index    ( ioctl_index    ),
+	 .ioctl_addr     ( ioctl_addr     ),
     .ioctl_data     ( ioctl_data     ),
     .ioctl_wr       ( ioctl_wr       ),
     .prog_addr      ( prog_addr      ),
@@ -392,6 +398,7 @@ u_frame(
 	 .JOY_CLK(JOY_CLK),
 	 .JOY_LOAD(JOY_LOAD),
 	 .JOY_DATA(JOY_DATA),
+     .USER_OSD(USER_OSD),	 
     // Debug
     .gfx_en         ( gfx_en         )
 );
@@ -440,7 +447,7 @@ assign sim_pxl_cen = pxl_cen;
     // PROM programming
     .ioctl_addr   ( ioctl_addr       ),
     .ioctl_data   ( ioctl_data       ),
-    .ioctl_wr     ( ioctl_wr         ),
+    .ioctl_wr     ( ioctl_wr && !ioctl_index ),
     .prog_addr    ( prog_addr        ),
     .prog_data    ( prog_data        ),
     .prog_mask    ( prog_mask        ),
@@ -463,7 +470,7 @@ assign sim_pxl_cen = pxl_cen;
     `endif
 
     // DIP switches
-    .status       ( status           ),
+    .status       ( {dsw[3],dsw[2],dsw[1],dsw[0]} ),
     .dip_pause    ( dip_pause        ),
     .dip_flip     ( dip_flip         ),
     .dip_test     ( dip_test         ),

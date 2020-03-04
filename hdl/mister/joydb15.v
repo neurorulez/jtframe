@@ -50,7 +50,7 @@ always @(posedge JOY_CLK) begin
         5'd13 : joy2[3]  <= JOY_DATA;  //  P2 Arriba
         5'd14 : joy1[9]  <= JOY_DATA;  //P1 F 
         5'd15 : joy1[8]  <= JOY_DATA;  //P1 E 
-        5'd16 : joy1[11]  <= JOY_DATA; //P1 Select
+        5'd16 : joy1[11] <= JOY_DATA;  //P1 Select
         5'd17 : joy1[10] <= JOY_DATA;  //P1 Start
         5'd18 : joy2[9]  <= JOY_DATA;  //  P2 F
         5'd19 : joy2[8]  <= JOY_DATA;  //  P2 E 
@@ -62,7 +62,7 @@ always @(posedge JOY_CLK) begin
         5'd25 : joy2[4]  <= JOY_DATA;  //  P2 A
     endcase              
 end
-//----HNLS DCBAUDLR
+//----LS FEDCBAUDLR
 assign joystick1[15:0] = ~joy1;
 assign joystick2[15:0] = ~joy2;
 

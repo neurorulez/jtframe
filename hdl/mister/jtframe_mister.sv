@@ -57,7 +57,8 @@ module jtframe_mister #(parameter
     input           SDRAM_CLK,      // SDRAM Clock
     output          SDRAM_CKE,      // SDRAM Clock Enable
     // ROM load
-    output [22:0]   ioctl_addr,
+    output [ 7:0]   ioctl_index, 
+	 output [22:0]   ioctl_addr,
     output [ 7:0]   ioctl_data,
     output          ioctl_wr,
     input  [21:0]   prog_addr,
@@ -128,13 +129,14 @@ module jtframe_mister #(parameter
 	 output          JOY_CLK,
 	 output          JOY_LOAD,
 	 input           JOY_DATA,
-
+	 output          USER_OSD,
     // Debug
     output          LED,
     output   [3:0]  gfx_en
 );
 
 assign LED  = downloading | dwnld_busy;
+assign USER_OSD = joydb15_1[10] & joydb15_1[6];
 
 // control
 reg [15:0] joydb15_1,joydb15_2;
@@ -207,7 +209,9 @@ hps_io #(.STRLEN($size(CONF_STR)/8),.PS2DIV(32)) u_hps_io
     .ioctl_wr        ( ioctl_wr       ),
     .ioctl_addr      ( ioctl_addr     ),
     .ioctl_dout      ( ioctl_data     ),
+	.ioctl_index     ( ioctl_index    ),
 
+	.joy_raw         ( joydb15_1[5:0] ),	
     .joystick_0      ( joystick_USB_1 ),
     .joystick_1      ( joystick_USB_2 ),
     .ps2_kbd_clk_out ( ps2_kbd_clk    ),
