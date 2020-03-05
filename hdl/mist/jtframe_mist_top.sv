@@ -155,8 +155,8 @@ wire [15:0] snd_left, snd_right;
 assign snd_right = snd_left;
 `endif
 
-wire [9:0] game_joy1, game_joy2;
-wire [1:0] game_coin, game_start;
+wire [9:0] game_joy1, game_joy2, game_joy3, game_joy4;
+wire [3:0] game_coin, game_start;
 wire game_rst;
 wire [3:0] gfx_en;
 // SDRAM
@@ -296,6 +296,8 @@ u_frame(
     // joystick
     .game_joystick1 ( game_joy1      ),
     .game_joystick2 ( game_joy2      ),
+    .game_joystick3 ( game_joy3      ),
+    .game_joystick4 ( game_joy4      ),
     .game_coin      ( game_coin      ),
     .game_start     ( game_start     ),
     .game_service   (                ), // unused
@@ -323,6 +325,8 @@ u_frame(
     assign game_start[1] = 1'b1;
     assign game_coin[1]  = 1'b1;
     assign game_joystick2 = ~10'd0;
+    assign game_joystick3 = ~10'd0;
+    assign game_joystick4 = ~10'd0;
     assign game_joystick1[9:7] = 3'b111;
     assign sim_vb = vs;
     assign sim_hb = hs;
@@ -349,6 +353,10 @@ u_game(
     .coin_input  ( game_coin      ),
     .joystick1   ( game_joy1[7:0] ),
     .joystick2   ( game_joy2[7:0] ),
+    `ifdef JTFRAME_4PLAYERS
+    .joystick3    ( game_joy3[7:0]   ),
+    .joystick4    ( game_joy4[7:0]   ),
+    `endif
 
     // Sound control
     .enable_fm   ( enable_fm      ),

@@ -18,7 +18,7 @@
 
 // Based on MiST tutorials
 
-module jtgng_keyboard(
+module jtframe_keyboard(
     input clk,
     input rst,
 

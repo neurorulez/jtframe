@@ -89,8 +89,10 @@ module jtframe_mister #(parameter
     // joystick
     output  [ 9:0]  game_joystick1,
     output  [ 9:0]  game_joystick2,
-    output  [ 1:0]  game_coin,
-    output  [ 1:0]  game_start,
+    output  [ 9:0]  game_joystick3,
+    output  [ 9:0]  game_joystick4,
+    output  [ 3:0]  game_coin,
+    output  [ 3:0]  game_start,
     output          game_service,
     // DIP and OSD settings
     output  [ 7:0]  hdmi_arx,
@@ -150,9 +152,11 @@ joy_db15 joy_db15
   .joystick2 ( joydb15_2 )	  
 );
 
-wire [15:0]   joystick_USB_1,  joystick_USB_2;
+wire [15:0]   joystick_USB_1, joystick_USB_2, joystick_USB_3, joystick_USB_4;
 wire [15:0]   joystick1 = |status[31:30] ? {BUTTONS<6 ? joydb15_1[9] : 1'b0,joydb15_1[11],BUTTONS<5 ? joydb15_1[8] : 1'b0,joydb15_1[10],joydb15_1[3+BUTTONS:0]} : joystick_USB_1;
 wire [15:0]   joystick2 =  status[31]    ? {BUTTONS<6 ? joydb15_2[9] : 1'b0,joydb15_2[11],joydb15_2[10],BUTTONS<5 ? joydb15_2[8] : 1'b0,joydb15_2[3+BUTTONS:0]} : status[30] ? joystick_USB_1 : joystick_USB_2;
+wire [15:0]   joystick3 = joystick_USB_3;
+wire [15:0]   joystick4 = joystick_USB_4;
 wire          ps2_kbd_clk, ps2_kbd_data;
 wire [2:0]    hpsio_nc; // top 3 bits of ioctl_addr are ignored
 wire          force_scan2x, direct_video;
@@ -222,6 +226,8 @@ hps_io #(.STRLEN($size(CONF_STR)/8),.PS2DIV(32)) u_hps_io
 	 .joy_raw         ( joydb15_1[5:0] ),	
     .joystick_0      ( joystick_USB_1 ),
     .joystick_1      ( joystick_USB_2 ),
+    .joystick_2      ( joystick_USB_3 ),
+    .joystick_3      ( joystick_USB_4 ),
     .ps2_kbd_clk_out ( ps2_kbd_clk    ),
     .ps2_kbd_data_out( ps2_kbd_data   )
     //.ps2_key       ( ps2_key       )
@@ -249,8 +255,12 @@ jtframe_board #(
     .ps2_kbd_data   ( ps2_kbd_data    ),
     .board_joystick1( joystick1       ),
     .board_joystick2( joystick2       ),
+    .board_joystick3( joystick3       ),
+    .board_joystick4( joystick4       ),    
     .game_joystick1 ( game_joystick1  ),
     .game_joystick2 ( game_joystick2  ),
+    .game_joystick3 ( game_joystick3  ),
+    .game_joystick4 ( game_joystick4  ),
     .game_coin      ( game_coin       ),
     .game_start     ( game_start      ),
     .game_service   ( game_service    ),

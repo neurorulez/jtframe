@@ -224,8 +224,8 @@ wire        ioctl_rom_wr;
 wire [22:0] ioctl_addr;
 wire [ 7:0] ioctl_data;
 
-wire [ 9:0] game_joy1, game_joy2;
-wire [ 1:0] game_coin, game_start;
+wire [ 9:0] game_joy1, game_joy2, game_joy3, game_joy4;
+wire [ 2:0] game_coin, game_start;
 wire [ 3:0] gfx_en;
 
 wire        downloading, game_rst, rst, rst_n, dwnld_busy;
@@ -356,6 +356,8 @@ u_frame(
     // joystick
     .game_joystick1 ( game_joy1      ),
     .game_joystick2 ( game_joy2      ),
+    .game_joystick3 ( game_joy3      ),
+    .game_joystick4 ( game_joy4      ),
     .game_coin      ( game_coin      ),
     .game_start     ( game_start     ),
     .game_service   (                ), // unused
@@ -409,7 +411,6 @@ assign sim_pxl_cen = pxl_cen;
 
 ///////////////////////////////////////////////////////////////////
 
-
 `ifdef SIMULATION
 assign sim_pxl_clk = clk_sys;
 assign sim_pxl_cen = pxl_cen;
@@ -437,6 +438,10 @@ assign sim_pxl_cen = pxl_cen;
     .coin_input   ( game_coin        ),
     .joystick1    ( game_joy1[7:0]   ),
     .joystick2    ( game_joy2[7:0]   ),
+    `ifdef JTFRAME_4PLAYERS
+    .joystick3    ( game_joy3[7:0]   ),
+    .joystick4    ( game_joy4[7:0]   ),
+    `endif
 
     // Sound control
     .enable_fm    ( enable_fm        ),

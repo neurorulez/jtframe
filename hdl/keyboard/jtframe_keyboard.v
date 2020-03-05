@@ -18,7 +18,7 @@
 
 // Based on MiST tutorials
 
-module jtgng_keyboard(
+module jtframe_keyboard(
     input clk,
     input rst,
 
@@ -29,8 +29,8 @@ module jtgng_keyboard(
     // decodes keys
     output reg [9:0] key_joy1,
     output reg [9:0] key_joy2,
-    output reg [1:0] key_start,
-    output reg [1:0] key_coin,
+    output reg [3:0] key_start,
+    output reg [3:0] key_coin,
     output reg key_reset,
     output reg key_pause,
     output reg key_service,
@@ -93,10 +93,12 @@ always @(posedge clk) begin
                     // coins
                     9'h2e                : key_coin[0] <= !key_released;  // 1st coin
                     9'h36: key_coin[1] <= !key_released;  // 2nd coin
-                    9'h16, 9'h05 /* F1 */: key_start[0] <= !key_released; // 1P start
-                    9'h1e, 9'h06 /* F2 */: key_start[1] <= !key_released; // 2P start
+                    9'h16, 9'h05 /* 1, F1 */: key_start[0] <= !key_released; // 1P start
+                    9'h1e, 9'h06 /* 2, F2 */: key_start[1] <= !key_released; // 2P start
+                    9'h26        /* 3     */: key_start[2] <= !key_released; // 3P start
+                    9'h25        /* 4     */: key_start[3] <= !key_released; // 4P start
                     // system control
-                    9'h4d, 9'h0C /* F4 */: key_pause <= !key_released;
+                    9'h4d        /*    */: key_pause <= !key_released;
                     9'h04        /* F3 */: key_reset <= !key_released;
                     9'h46        /*  9 */: key_service <= !key_released;
                     // GFX enable

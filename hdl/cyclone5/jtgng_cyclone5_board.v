@@ -177,7 +177,7 @@ wire [3:0] key_vgactrl;
 wire       key_service;
 
 `ifndef SIMULATION
-jtgng_keyboard u_keyboard(
+jtframe_keyboard u_keyboard(
     .clk         ( clk_sys       ),
     .rst         ( rst           ),
     // ps2 interface

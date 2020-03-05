@@ -107,8 +107,10 @@ module jtframe_mist #(parameter
     // joystick
     output   [9:0]  game_joystick1,
     output   [9:0]  game_joystick2,
-    output   [1:0]  game_coin,
-    output   [1:0]  game_start,
+    output   [9:0]  game_joystick3,
+    output   [9:0]  game_joystick4,
+    output   [3:0]  game_coin,
+    output   [3:0]  game_start,
     output          game_service,
     // DIP and OSD settings
     output          enable_fm,
@@ -125,7 +127,7 @@ module jtframe_mist #(parameter
 );
 
 // control
-wire [31:0]   joystick1, joystick2;
+wire [31:0]   joystick1, joystick2, joystick3, joystick4;
 wire          ps2_kbd_clk, ps2_kbd_data;
 wire          osd_shown;
 
@@ -186,6 +188,8 @@ jtframe_mist_base #(
     .status         ( status        ),
     .joystick1      ( joystick1     ),
     .joystick2      ( joystick2     ),
+    .joystick3      ( joystick3     ),
+    .joystick4      ( joystick4     ),
     .ps2_kbd_clk    ( ps2_kbd_clk   ),
     .ps2_kbd_data   ( ps2_kbd_data  ),
     // audio
@@ -223,8 +227,12 @@ jtframe_board #(
     .ps2_kbd_data   ( ps2_kbd_data    ),
     .board_joystick1( joystick1[15:0] ),
     .board_joystick2( joystick2[15:0] ),
+    .board_joystick3( joystick3[15:0] ),
+    .board_joystick4( joystick4[15:0] ),
     .game_joystick1 ( game_joystick1  ),
     .game_joystick2 ( game_joystick2  ),
+    .game_joystick3 ( game_joystick3  ),
+    .game_joystick4 ( game_joystick4  ),
     .game_coin      ( game_coin       ),
     .game_start     ( game_start      ),
     .game_service   ( game_service    ),
