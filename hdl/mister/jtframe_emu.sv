@@ -218,11 +218,11 @@ wire [7:0] dipsw_a, dipsw_b;
 wire [1:0] dip_fxlevel;
 wire       enable_fm, enable_psg;
 wire       dip_pause, dip_flip, dip_test;
+wire [31:0] dipsw;
 
-wire        ioctl_wr;
+wire        ioctl_rom_wr;
 wire [22:0] ioctl_addr;
 wire [ 7:0] ioctl_data;
-wire [ 7:0] ioctl_index;
 
 wire [ 9:0] game_joy1, game_joy2;
 wire [ 1:0] game_coin, game_start;
@@ -230,9 +230,6 @@ wire [ 3:0] gfx_en;
 
 wire        downloading, game_rst, rst, rst_n, dwnld_busy;
 wire        rst_req   = RESET | status[0] | buttons[1];
-
-reg [7:0] dsw[8];
-always @(posedge clk_sys) if (ioctl_wr && (ioctl_index==254) && !ioctl_addr[21:3]) dsw[ioctl_addr[2:0]] <= ioctl_data;
 
 assign LED_DISK  = 2'b0;
 assign LED_POWER = 2'b0;
@@ -327,10 +324,9 @@ u_frame(
     .SDRAM_BA       ( SDRAM_BA       ),
     .SDRAM_CKE      ( SDRAM_CKE      ),
     // ROM load
- 	 .ioctl_index    ( ioctl_index    ),
 	 .ioctl_addr     ( ioctl_addr     ),
     .ioctl_data     ( ioctl_data     ),
-    .ioctl_wr       ( ioctl_wr       ),
+    .ioctl_rom_wr   ( ioctl_rom_wr   ),
     .prog_addr      ( prog_addr      ),
     .prog_data      ( prog_data      ),
     .prog_mask      ( prog_mask      ),
@@ -371,6 +367,7 @@ u_frame(
     .dip_pause      ( dip_pause      ),
     .dip_flip       ( dip_flip       ),
     .dip_fxlevel    ( dip_fxlevel    ),
+	 .dipsw          ( dipsw          ),
     // screen
     .rotate         (                ),
     // HDMI
@@ -447,7 +444,7 @@ assign sim_pxl_cen = pxl_cen;
     // PROM programming
     .ioctl_addr   ( ioctl_addr       ),
     .ioctl_data   ( ioctl_data       ),
-    .ioctl_wr     ( ioctl_wr && !ioctl_index ),
+    .ioctl_wr     ( ioctl_rom_wr     ),
     .prog_addr    ( prog_addr        ),
     .prog_data    ( prog_data        ),
     .prog_mask    ( prog_mask        ),
@@ -470,7 +467,7 @@ assign sim_pxl_cen = pxl_cen;
     `endif
 
     // DIP switches
-    .status       ( {dsw[3],dsw[2],dsw[1],dsw[0]} ),
+    .status       ( dipsw            ),
     .dip_pause    ( dip_pause        ),
     .dip_flip     ( dip_flip         ),
     .dip_test     ( dip_test         ),

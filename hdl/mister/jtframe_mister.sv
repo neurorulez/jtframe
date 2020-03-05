@@ -57,10 +57,9 @@ module jtframe_mister #(parameter
     input           SDRAM_CLK,      // SDRAM Clock
     output          SDRAM_CKE,      // SDRAM Clock Enable
     // ROM load
-    output [ 7:0]   ioctl_index, 
 	 output [22:0]   ioctl_addr,
     output [ 7:0]   ioctl_data,
-    output          ioctl_wr,
+    output          ioctl_rom_wr,
     input  [21:0]   prog_addr,
     input  [ 7:0]   prog_data,
     input  [ 1:0]   prog_mask,
@@ -125,6 +124,7 @@ module jtframe_mister #(parameter
     output          dip_pause,
     output          dip_flip,     // A change in dip_flip implies a reset
     output  [ 1:0]  dip_fxlevel,
+	 output  [31:0]  dipsw,
 	 //DB15 
 	 output          JOY_CLK,
 	 output          JOY_LOAD,
@@ -192,6 +192,14 @@ end
 
 wire [21:0] gamma_bus;
 
+wire [ 7:0] ioctl_index;
+wire        ioctl_wr;
+
+reg  [7:0] dsw[8];
+always @(posedge clk_sys) if (ioctl_wr && (ioctl_index==254) && !ioctl_addr[21:3]) dsw[ioctl_addr[2:0]] <= ioctl_data;
+assign dipsw = {dsw[3],dsw[2],dsw[1],dsw[0]};
+assign ioctl_rom_wr = (ioctl_wr && !ioctl_index);
+
 hps_io #(.STRLEN($size(CONF_STR)/8),.PS2DIV(32)) u_hps_io
 (
     .clk_sys         ( clk_sys        ),
@@ -209,9 +217,9 @@ hps_io #(.STRLEN($size(CONF_STR)/8),.PS2DIV(32)) u_hps_io
     .ioctl_wr        ( ioctl_wr       ),
     .ioctl_addr      ( ioctl_addr     ),
     .ioctl_dout      ( ioctl_data     ),
-	.ioctl_index     ( ioctl_index    ),
+	 .ioctl_index     ( ioctl_index    ),
 
-	.joy_raw         ( joydb15_1[5:0] ),	
+	 .joy_raw         ( joydb15_1[5:0] ),	
     .joystick_0      ( joystick_USB_1 ),
     .joystick_1      ( joystick_USB_2 ),
     .ps2_kbd_clk_out ( ps2_kbd_clk    ),
