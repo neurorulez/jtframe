@@ -66,6 +66,8 @@ module jtframe_mist_base #(parameter
     output [31:0]   status,
     output [31:0]   joystick1,
     output [31:0]   joystick2,
+    output [31:0]   joystick3,
+    output [31:0]   joystick4,
     output          ps2_kbd_clk,
     output          ps2_kbd_data,
     // Sound
@@ -75,7 +77,7 @@ module jtframe_mist_base #(parameter
     output          snd_pwm_left,
     output          snd_pwm_right,
     // ROM load from SPI
-    output [21:0]   ioctl_addr,
+    output [22:0]   ioctl_addr,
     output [ 7:0]   ioctl_data,
     output          ioctl_wr,
     output          downloading
@@ -132,6 +134,8 @@ user_io #(.STRLEN(CONF_STR_LEN)) u_userio(
     .SPI_MOSI       ( SPI_DI    ),
     .joystick_0     ( joystick2 ),
     .joystick_1     ( joystick1 ),
+    .joystick_3     ( joystick3 ),
+    .joystick_4     ( joystick4 ),
     .status         ( status    ),
     .ypbpr          ( ypbpr     ),
     .scandoubler_disable ( scan2x_enb ),
@@ -163,7 +167,7 @@ assign scan2x_enb = `SCANDOUBLER_DISABLE;
 assign ypbpr = 1'b0;
 `endif
 
-data_io #(.aw(22)) u_datain (
+data_io u_datain (
     .sck                ( SPI_SCK      ),
     .ss                 ( SPI_SS2      ),
     .sdi                ( SPI_DI       ),

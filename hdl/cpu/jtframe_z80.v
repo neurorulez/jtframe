@@ -38,10 +38,77 @@
 `endif
 `endif
 
-module jtframe_z80_wait (
+module jtframe_sysz80(
     input         rst_n,
     input         clk,
     input         cen,
+    output        cpu_cen,
+    input         int_n,
+    input         nmi_n,
+    input         busrq_n,
+    output        m1_n,
+    output        mreq_n,
+    output        iorq_n,
+    output        rd_n,
+    output        wr_n,
+    output        rfsh_n,
+    output        halt_n,
+    output        busak_n,
+    output [15:0] A,
+    input  [7:0]  cpu_din,
+    output [7:0]  cpu_dout,
+    output [7:0]  ram_dout,
+    // ROM access
+    input         ram_cs,
+    input         rom_cs,
+    input         rom_ok
+);
+
+    parameter RAM_AW=12;
+    wire ram_we = ram_cs & ~wr_n;
+
+    jtframe_ram #(.aw(RAM_AW)) u_ram(
+        .clk    ( clk         ),
+        .cen    ( cpu_cen     ),
+        .data   ( cpu_dout    ),
+        .addr   ( A[RAM_AW-1:0]),
+        .we     ( ram_we      ),
+        .q      ( ram_dout    )
+    );
+
+
+    jtframe_z80_romwait u_z80wait(
+        .rst_n      ( rst_n     ),
+        .clk        ( clk       ),
+        .cen        ( cen       ),
+        .cpu_cen    ( cpu_cen   ),
+        .int_n      ( int_n     ),
+        .nmi_n      ( nmi_n     ),
+        .busrq_n    ( busrq_n   ),
+        .m1_n       ( m1_n      ),
+        .mreq_n     ( mreq_n    ),
+        .iorq_n     ( iorq_n    ),
+        .rd_n       ( rd_n      ),
+        .wr_n       ( wr_n      ),
+        .rfsh_n     ( rfsh_n    ),
+        .halt_n     ( halt_n    ),
+        .busak_n    ( busak_n   ),
+        .A          ( A         ),
+        .din        ( cpu_din   ),
+        .dout       ( cpu_dout  ),
+        .rom_cs     ( rom_cs    ),
+        .rom_ok     ( rom_ok    )
+    );
+
+endmodule
+
+// Note that this Z80 operates one clock cycle behind cpu_cen
+// Because of the internal gating done to it
+module jtframe_z80_romwait (
+    input         rst_n,
+    input         clk,
+    input         cen,
+    output        cpu_cen,
     input         int_n,
     input         nmi_n,
     input         busrq_n,
@@ -61,14 +128,14 @@ module jtframe_z80_wait (
     input         rom_ok
 );
 
-wire cen_out;
+wire wait_n;
 
 jtframe_rom_wait u_wait(
     .rst_n    ( rst_n     ),
     .clk      ( clk       ),
     .cen_in   ( cen       ),
-    .cen_out  ( cen_out   ),
-    .gate     (           ),
+    .cen_out  ( cpu_cen   ),
+    .gate     ( wait_n    ),
       // manage access to ROM data from SDRAM
     .rom_cs   ( rom_cs    ),
     .rom_ok   ( rom_ok    )
@@ -77,8 +144,8 @@ jtframe_rom_wait u_wait(
 jtframe_z80 u_cpu(
     .rst_n    ( rst_n     ),
     .clk      ( clk       ),
-    .cen      ( cen_out   ),
-    .wait_n   ( 1'b1      ),
+    .cen      ( cen       ),
+    .wait_n   ( wait_n    ),
     .int_n    ( int_n     ),
     .nmi_n    ( nmi_n     ),
     .busrq_n  ( busrq_n   ),

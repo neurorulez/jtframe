@@ -134,7 +134,7 @@ begin                 -- architecture rtl
 
   s_count_enable <= '1' when s_pre_count = conv_unsigned(11,4) else '0';
   
-  p_divide_clk: process (clk, reset)
+  p_divide_clk: process (clk, cen, reset)
     
     begin
 
@@ -165,7 +165,7 @@ begin                 -- architecture rtl
   -- The same function is realised for counter1.
   s_ext_edge0 <= '1' when (s_t0ff1 = '0' and s_t0ff2 = '1') else '0';      
 
-  p_sample_t0: process (clk, reset)
+  p_sample_t0: process (clk, cen, reset)
       
     begin
 
@@ -190,7 +190,7 @@ begin                 -- architecture rtl
       
   s_ext_edge1 <= '1' when (s_t1ff1 = '0' and s_t1ff2 = '1') else '0';
 
-  p_sample_t1: process (clk, reset)
+  p_sample_t1: process (clk, cen, reset)
       
     begin
 
@@ -223,7 +223,7 @@ begin                 -- architecture rtl
   s_count1(15 downto 8) <= s_counth1;
   s_count1(7 downto 0) <= s_countl1;
       
-  p_tmr_ctr: process (clk, reset)
+  p_tmr_ctr: process (clk, cen, reset)
     
   begin
 

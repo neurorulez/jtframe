@@ -129,7 +129,7 @@ begin                 -- architecture rtl
   
   s_tf <= '1' when (s_ff0 = '1' and s_ff1 = '0') else '0';      
 
-  p_sample_tf: process (clk, reset)
+  p_sample_tf: process (clk, cen, reset)
       
     begin
 
@@ -198,7 +198,7 @@ begin                 -- architecture rtl
   s_m13_txshift_en <= '1' when s_txm13_ff0 = '1' and s_txm13_ff1 = '0'
                       else '0';
       
-  p_divide_clk: process (clk, reset)
+  p_divide_clk: process (clk, cen, reset)
     
     begin
 
@@ -293,7 +293,7 @@ begin                 -- architecture rtl
                         (s_rxd_ff0 = '1' and s_rxd_ff2 = '1') or
                         (s_rxd_ff1 = '1' and s_rxd_ff2 = '1') else '0';
                
-  p_sample_rx: process (clk, reset)
+  p_sample_rx: process (clk, cen, reset)
   begin
     if reset = '1' then
       s_rxd_ff0 <= '0';
@@ -396,7 +396,7 @@ begin                 -- architecture rtl
 
     txd_o <= s_txdm0;
   
-  p_transmit : process (clk, reset)
+  p_transmit : process (clk, cen, reset)
 
     variable v_txstep : std_logic_vector(1 downto 0);
     
@@ -804,7 +804,7 @@ begin                 -- architecture rtl
 -- This is the finit state machine for the receive shift register
 -------------------------------------------------------------------------------
       
-  p_receive: process (clk, reset)    
+  p_receive: process (clk, cen, reset)    
     variable v_rxstep : std_logic_vector(1 downto 0);
     
     begin

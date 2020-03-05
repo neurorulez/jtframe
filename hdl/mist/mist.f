@@ -6,6 +6,7 @@ jtframe_mist_base.v
 -sv user_io.v
 data_io.v
 ../ver/spitx.v
+../ver/video_dump.v
 ../video/jtgng_vga.v
 ../video/jtgng_vgapxl.v
 ../video/jtframe_scan2x.v

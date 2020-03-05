@@ -8,7 +8,7 @@ set_global_assignment -name VERILOG_FILE       [file join $::quartus(qip_path) .
 set_global_assignment -name VERILOG_FILE       [file join $::quartus(qip_path) ../sound/hifi_1bit_dac.v     ]
 set_global_assignment -name VERILOG_FILE       [file join $::quartus(qip_path) ../sdram/jtframe_sdram.v             ]
 set_global_assignment -name VERILOG_FILE       [file join $::quartus(qip_path) ../ram/jtframe_dual_clk_ram.v  ]
-set_global_assignment -name VERILOG_FILE       [file join $::quartus(qip_path) ../keyboard/jtgng_keyboard.v ]
+set_global_assignment -name VERILOG_FILE       [file join $::quartus(qip_path) ../keyboard/jtframe_keyboard.v ]
 set_global_assignment -name VHDL_FILE          [file join $::quartus(qip_path) ../keyboard/ps2_intf.vhd     ]
 set_global_assignment -name VERILOG_FILE       [file join $::quartus(qip_path) ../jtframe_board.v           ]
 set_global_assignment -name VERILOG_FILE       [file join $::quartus(qip_path) ../jtframe_dip.v             ]

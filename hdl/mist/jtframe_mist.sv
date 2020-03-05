@@ -1,16 +1,16 @@
-/*  This file is part of JT_GNG.
-    JT_GNG program is free software: you can redistribute it and/or modify
+/*  This file is part of JTFRAME.
+    JTFRAME program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
 
-    JT_GNG program is distributed in the hope that it will be useful,
+    JTFRAME program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
-    along with JT_GNG.  If not, see <http://www.gnu.org/licenses/>.
+    along with JTFRAME.  If not, see <http://www.gnu.org/licenses/>.
 
     Author: Jose Tejada Gomez. Twitter: @topapate
     Version: 1.0
@@ -20,7 +20,7 @@
 
 module jtframe_mist #(parameter
     SIGNED_SND             = 1'b0,
-    THREE_BUTTONS          = 1'b0,
+    BUTTONS                = 2,
     GAME_INPUTS_ACTIVE_LOW = 1'b1,
     CONF_STR               = "",
     COLORW                 = 4,
@@ -69,6 +69,10 @@ module jtframe_mist #(parameter
     output          data_rdy,
     output          loop_rst,
     input           refresh_en,
+    // Write back to SDRAM
+    input  [ 1:0]   sdram_wrmask,
+    input           sdram_rnw,
+    input  [15:0]   data_write,
     // SPI interface to arm io controller
     output          SPI_DO,
     input           SPI_DI,
@@ -78,7 +82,7 @@ module jtframe_mist #(parameter
     input           SPI_SS4,
     input           CONF_DATA0,
     // ROM load from SPI
-    output [21:0]   ioctl_addr,
+    output [22:0]   ioctl_addr,
     output [ 7:0]   ioctl_data,
     output          ioctl_wr,
     input  [21:0]   prog_addr,
@@ -103,15 +107,12 @@ module jtframe_mist #(parameter
     // joystick
     output   [9:0]  game_joystick1,
     output   [9:0]  game_joystick2,
-    output   [1:0]  game_coin,
-    output   [1:0]  game_start,
-    output          game_pause,
+    output   [9:0]  game_joystick3,
+    output   [9:0]  game_joystick4,
+    output   [3:0]  game_coin,
+    output   [3:0]  game_start,
     output          game_service,
     // DIP and OSD settings
-    output  [ 7:0]  hdmi_arx,
-    output  [ 7:0]  hdmi_ary,
-    output          vertical_n,
-
     output          enable_fm,
     output          enable_psg,
 
@@ -126,7 +127,7 @@ module jtframe_mist #(parameter
 );
 
 // control
-wire [31:0]   joystick1, joystick2;
+wire [31:0]   joystick1, joystick2, joystick3, joystick4;
 wire          ps2_kbd_clk, ps2_kbd_data;
 wire          osd_shown;
 
@@ -187,6 +188,8 @@ jtframe_mist_base #(
     .status         ( status        ),
     .joystick1      ( joystick1     ),
     .joystick2      ( joystick2     ),
+    .joystick3      ( joystick3     ),
+    .joystick4      ( joystick4     ),
     .ps2_kbd_clk    ( ps2_kbd_clk   ),
     .ps2_kbd_data   ( ps2_kbd_data  ),
     // audio
@@ -203,7 +206,7 @@ jtframe_mist_base #(
 );
 
 jtframe_board #(
-    .THREE_BUTTONS         ( THREE_BUTTONS         ),
+    .BUTTONS               ( BUTTONS               ),
     .GAME_INPUTS_ACTIVE_LOW( GAME_INPUTS_ACTIVE_LOW),
     .COLORW                ( COLORW                ),
     .VIDEO_WIDTH           ( VIDEO_WIDTH           ),
@@ -224,8 +227,12 @@ jtframe_board #(
     .ps2_kbd_data   ( ps2_kbd_data    ),
     .board_joystick1( joystick1[15:0] ),
     .board_joystick2( joystick2[15:0] ),
+    .board_joystick3( joystick3[15:0] ),
+    .board_joystick4( joystick4[15:0] ),
     .game_joystick1 ( game_joystick1  ),
     .game_joystick2 ( game_joystick2  ),
+    .game_joystick3 ( game_joystick3  ),
+    .game_joystick4 ( game_joystick4  ),
     .game_coin      ( game_coin       ),
     .game_start     ( game_start      ),
     .game_service   ( game_service    ),
@@ -263,6 +270,11 @@ jtframe_board #(
     .prog_mask      ( prog_mask       ),
     .prog_we        ( prog_we         ),
     .prog_rd        ( prog_rd         ),
+    // write back support
+    .sdram_wrmask   ( sdram_wrmask    ),
+    .sdram_rnw      ( sdram_rnw       ),
+    .data_write     ( data_write      ),
+
     // Base video
     .osd_rotate     ( rotate          ),
     .game_r         ( game_r          ),

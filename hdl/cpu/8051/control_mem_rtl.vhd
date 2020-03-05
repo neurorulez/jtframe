@@ -529,7 +529,7 @@ for_siu_edge:
 --          s_tf1_h1,s_tf1_h2,s_ri_h1,s_ri_h2,s_ti_h1,s_ti_h2
 ------------------------------------------------------------------------------ 
     
-  iep: process (clk,reset) 
+  iep: process (clk,cen,reset) 
  
   begin  -- process iep 
     
@@ -741,7 +741,7 @@ for_siu_edge:
 --          s_inthigh,s_preadr
 ------------------------------------------------------------------------------ 
  
-  p_wr_internal_reg : process (reset,clk)
+  p_wr_internal_reg : process (reset,cen,clk)
   begin
     if reset='1' then 
       state <= STARTUP; 

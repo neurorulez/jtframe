@@ -31,15 +31,15 @@ module jtframe_rom #(parameter
     SLOT0_AW = 8, SLOT1_AW = 8, SLOT2_AW = 8, SLOT3_AW = 8,
     SLOT4_AW = 8, SLOT5_AW = 8, SLOT6_AW = 8, SLOT7_AW = 8, SLOT8_AW = 8,
 
-    SLOT0_OFFSET = 22'h0,
-    SLOT1_OFFSET = 22'h0,
-    SLOT2_OFFSET = 22'h0,
-    SLOT3_OFFSET = 22'h0,
-    SLOT4_OFFSET = 22'h0,
-    SLOT5_OFFSET = 22'h0,
-    SLOT6_OFFSET = 22'h0,
-    SLOT7_OFFSET = 22'h0,
-    SLOT8_OFFSET = 22'h0
+    parameter [21:0] SLOT0_OFFSET = 22'h0,
+    parameter [21:0] SLOT1_OFFSET = 22'h0,
+    parameter [21:0] SLOT2_OFFSET = 22'h0,
+    parameter [21:0] SLOT3_OFFSET = 22'h0,
+    parameter [21:0] SLOT4_OFFSET = 22'h0,
+    parameter [21:0] SLOT5_OFFSET = 22'h0,
+    parameter [21:0] SLOT6_OFFSET = 22'h0,
+    parameter [21:0] SLOT7_OFFSET = 22'h0,
+    parameter [21:0] SLOT8_OFFSET = 22'h0
 
     // SLOT0_BRAM   = 0,
     // SLOT1_BRAM   = 0
@@ -126,10 +126,21 @@ assign slot6_ok = ok[6];
 assign slot7_ok = ok[7];
 assign slot8_ok = ok[8];
 
-jtframe_romrq #(.AW(SLOT0_AW),.DW(SLOT0_DW),.OFFSET(SLOT0_OFFSET)) u_slot0(
+wire [21:0] offset0 = SLOT0_OFFSET,
+            offset1 = SLOT1_OFFSET,
+            offset2 = SLOT2_OFFSET,
+            offset3 = SLOT3_OFFSET,
+            offset4 = SLOT4_OFFSET,
+            offset5 = SLOT5_OFFSET,
+            offset6 = SLOT6_OFFSET,
+            offset7 = SLOT7_OFFSET,
+            offset8 = SLOT8_OFFSET;
+
+jtframe_romrq #(.AW(SLOT0_AW),.DW(SLOT0_DW)) u_slot0(
     .rst       ( rst                    ),
     .clk       ( clk                    ),
     .cen       ( 1'b1                   ),
+    .offset    ( offset0                ),
     .addr      ( slot0_addr             ),
     .addr_ok   ( slot0_cs               ),
     .sdram_addr( slot0_addr_req         ),
@@ -141,10 +152,11 @@ jtframe_romrq #(.AW(SLOT0_AW),.DW(SLOT0_DW),.OFFSET(SLOT0_OFFSET)) u_slot0(
     .we        ( data_sel[0]            )
 );
 
-jtframe_romrq #(.AW(SLOT1_AW),.DW(SLOT1_DW),.OFFSET(SLOT1_OFFSET)) u_slot1(
+jtframe_romrq #(.AW(SLOT1_AW),.DW(SLOT1_DW)) u_slot1(
     .rst       ( rst                    ),
     .clk       ( clk                    ),
     .cen       ( 1'b1                   ),
+    .offset    ( offset1                ),
     .addr      ( slot1_addr             ),
     .addr_ok   ( slot1_cs               ),
     .sdram_addr( slot1_addr_req         ),
@@ -156,10 +168,11 @@ jtframe_romrq #(.AW(SLOT1_AW),.DW(SLOT1_DW),.OFFSET(SLOT1_OFFSET)) u_slot1(
     .we        ( data_sel[1]            )
 );
 
-jtframe_romrq #(.AW(SLOT2_AW),.DW(SLOT2_DW),.OFFSET(SLOT2_OFFSET)) u_slot2(
+jtframe_romrq #(.AW(SLOT2_AW),.DW(SLOT2_DW)) u_slot2(
     .rst       ( rst                    ),
     .clk       ( clk                    ),
     .cen       ( 1'b1                   ),
+    .offset    ( offset2                ),
     .addr      ( slot2_addr             ),
     .addr_ok   ( slot2_cs               ),
     .sdram_addr( slot2_addr_req         ),
@@ -171,10 +184,11 @@ jtframe_romrq #(.AW(SLOT2_AW),.DW(SLOT2_DW),.OFFSET(SLOT2_OFFSET)) u_slot2(
     .we        ( data_sel[2]            )
 );
 
-jtframe_romrq #(.AW(SLOT3_AW),.DW(SLOT3_DW),.OFFSET(SLOT3_OFFSET)) u_slot3(
+jtframe_romrq #(.AW(SLOT3_AW),.DW(SLOT3_DW)) u_slot3(
     .rst       ( rst                    ),
     .clk       ( clk                    ),
     .cen       ( 1'b1                   ),
+    .offset    ( offset3                ),
     .addr      ( slot3_addr             ),
     .addr_ok   ( slot3_cs               ),
     .sdram_addr( slot3_addr_req         ),
@@ -186,10 +200,11 @@ jtframe_romrq #(.AW(SLOT3_AW),.DW(SLOT3_DW),.OFFSET(SLOT3_OFFSET)) u_slot3(
     .we        ( data_sel[3]            )
 );
 
-jtframe_romrq #(.AW(SLOT4_AW),.DW(SLOT4_DW),.OFFSET(SLOT4_OFFSET)) u_slot4(
+jtframe_romrq #(.AW(SLOT4_AW),.DW(SLOT4_DW)) u_slot4(
     .rst       ( rst                    ),
     .clk       ( clk                    ),
     .cen       ( 1'b1                   ),
+    .offset    ( offset4                ),
     .addr      ( slot4_addr             ),
     .addr_ok   ( slot4_cs               ),
     .sdram_addr( slot4_addr_req         ),
@@ -201,10 +216,11 @@ jtframe_romrq #(.AW(SLOT4_AW),.DW(SLOT4_DW),.OFFSET(SLOT4_OFFSET)) u_slot4(
     .we        ( data_sel[4]            )
 );
 
-jtframe_romrq #(.AW(SLOT5_AW),.DW(SLOT5_DW),.OFFSET(SLOT5_OFFSET)) u_slot5(
+jtframe_romrq #(.AW(SLOT5_AW),.DW(SLOT5_DW)) u_slot5(
     .rst       ( rst                    ),
     .clk       ( clk                    ),
     .cen       ( 1'b1                   ),
+    .offset    ( offset5                ),
     .addr      ( slot5_addr             ),
     .addr_ok   ( slot5_cs               ),
     .sdram_addr( slot5_addr_req         ),
@@ -216,10 +232,11 @@ jtframe_romrq #(.AW(SLOT5_AW),.DW(SLOT5_DW),.OFFSET(SLOT5_OFFSET)) u_slot5(
     .we        ( data_sel[5]            )
 );
 
-jtframe_romrq #(.AW(SLOT6_AW),.DW(SLOT6_DW),.OFFSET(SLOT6_OFFSET)) u_slot6(
+jtframe_romrq #(.AW(SLOT6_AW),.DW(SLOT6_DW)) u_slot6(
     .rst       ( rst                    ),
     .clk       ( clk                    ),
     .cen       ( 1'b1                   ),
+    .offset    ( offset6                ),
     .addr      ( slot6_addr             ),
     .addr_ok   ( slot6_cs               ),
     .sdram_addr( slot6_addr_req         ),
@@ -231,10 +248,11 @@ jtframe_romrq #(.AW(SLOT6_AW),.DW(SLOT6_DW),.OFFSET(SLOT6_OFFSET)) u_slot6(
     .we        ( data_sel[6]            )
 );
 
-jtframe_romrq #(.AW(SLOT7_AW),.DW(SLOT7_DW),.OFFSET(SLOT7_OFFSET)) u_slot7(
+jtframe_romrq #(.AW(SLOT7_AW),.DW(SLOT7_DW)) u_slot7(
     .rst       ( rst                    ),
     .clk       ( clk                    ),
     .cen       ( 1'b1                   ),
+    .offset    ( offset7                ),
     .addr      ( slot7_addr             ),
     .addr_ok   ( slot7_cs               ),
     .sdram_addr( slot7_addr_req         ),
@@ -247,10 +265,11 @@ jtframe_romrq #(.AW(SLOT7_AW),.DW(SLOT7_DW),.OFFSET(SLOT7_OFFSET)) u_slot7(
 );
 
 
-jtframe_romrq #(.AW(SLOT8_AW),.DW(SLOT8_DW),.OFFSET(SLOT8_OFFSET)) u_slot8(
+jtframe_romrq #(.AW(SLOT8_AW),.DW(SLOT8_DW)) u_slot8(
     .rst       ( rst                    ),
     .clk       ( clk                    ),
     .cen       ( 1'b1                   ),
+    .offset    ( offset8                ),
     .addr      ( slot8_addr             ),
     .addr_ok   ( slot8_cs               ),
     .sdram_addr( slot8_addr_req         ),
@@ -267,10 +286,11 @@ wire [8:0] active = ~data_sel & req;
 always @(posedge clk)
 if( loop_rst || downloading ) begin
     sdram_addr <= 22'd0;
-    ready_cnt <=  4'd0;
-    ready     <=  1'b0;
-    sdram_req <=  1'b0;
-    data_sel  <=  9'd0;
+    ready_cnt  <=  4'd0;
+    ready      <=  1'b0;
+    sdram_req  <=  1'b0;
+    data_sel   <=  9'd0;
+    refresh_en <=  1'b1;
 end else begin
     {ready, ready_cnt}  <= {ready_cnt, 1'b1};
     if( sdram_ack ) sdram_req <= 1'b0;

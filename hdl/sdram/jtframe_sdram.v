@@ -30,6 +30,10 @@ module jtframe_sdram(
     output reg          data_rdy,    // output data is valid
     output reg          sdram_ack,
     input               refresh_en,    // enable refresh to happen automatically
+    // Write back to SDRAM
+    input       [ 1:0]  sdram_wrmask,
+    input               sdram_rnw,
+    input       [15:0]  data_write,
     // ROM-load interface
     input               downloading,
     input               prog_we,    // strobe
@@ -60,16 +64,46 @@ localparam  CMD_LOAD_MODE   = 4'b0000, // 0
             CMD_ACTIVATE    = 4'b0011, // 3
             CMD_WRITE       = 4'b0100, // 4
             CMD_READ        = 4'b0101, // 5
-            CMD_STOP        = 4'b0110, // 6
+            CMD_STOP        = 4'b0110, // 6 Burst terminate
             CMD_NOP         = 4'b0111, // 7
             CMD_INHIBIT     = 4'b1000; // 8
+
+`ifdef JTFRAME_SDRAM_REPACK
+localparam REPACK = 1;
+`else 
+localparam REPACK = 0;
+`endif
 
 assign SDRAM_BA   = 2'b0;
 assign SDRAM_CKE  = 1'b1;
 
-reg SDRAM_WRITE;
-reg [7:0] write_data;
-assign SDRAM_DQ =  SDRAM_WRITE ? {write_data, write_data} : 16'hzzzz;
+reg [15:0] dq_ff;
+reg [15:0] dq_ff0;
+reg        dq_rdy;
+
+generate
+    if (REPACK==1) begin : data_repacking
+        always @(posedge clk) begin
+            data_read <= { dq_ff, dq_ff0 };
+            data_rdy  <= dq_rdy;
+        end
+    end else begin : data_transparent
+        always @(*) begin
+            data_read = { dq_ff, dq_ff0 };
+            data_rdy  = dq_rdy;
+        end
+    end
+endgenerate
+
+reg [15:0] dq_out;
+reg write_cycle, read_cycle, hold_bus;
+
+// SDRAM bus held down during idle cycles help prevent errors in some SDRAM MiSTer modules
+// MiSTer FPGA doesn't have pull downs, only pull up. The pull up didn't show performance
+// improvement
+// For a 32MB memory of mine, the difference between holding the bus and not holding it
+// means adding at least 6ns of usable shift range: from 3ns to 10ns
+assign SDRAM_DQ = write_cycle ? dq_out : ( hold_bus ? 16'h0 : 16'hzzzz);
 
 reg [8:0] col_addr;
 
@@ -82,7 +116,6 @@ reg [ 2:0] cnt_state;
 reg [ 2:0] init_state;
 reg       initialize;
 
-reg write_cycle=1'b0, read_cycle=1'b0;
 
 assign loop_rst = initialize;
 
@@ -96,7 +129,7 @@ reg writeon, readprog;
 //wire refresh_ok = !read_req;
 reg refresh_ok;
 
-always @(posedge clk or posedge rst)
+always @(posedge clk or posedge rst) begin
     if(rst) begin
         set_burst  <= 1'b0;
     end else begin
@@ -109,6 +142,7 @@ always @(posedge clk or posedge rst)
         end
         if( burst_done ) set_burst <= 1'b0;
     end
+end
 
 reg refresh_cycle;
 reg [1:0] refresh_sr;
@@ -116,7 +150,6 @@ reg [1:0] refresh_sr;
 always @(posedge clk)
     if( rst ) begin
         // initialization of SDRAM
-        SDRAM_WRITE<= 1'b0;
         SDRAM_CMD  <= CMD_NOP;
         SDRAM_DQMH <= 1'b0;
         SDRAM_DQML <= 1'b0;
@@ -128,10 +161,13 @@ always @(posedge clk)
         // Main loop
         burst_done <= 1'b0;
         cnt_state  <= 2'd0; //Starts after the precharge
-        data_rdy   <= 1'b0;
+        dq_rdy     <= 1'b0;
         sdram_ack  <= 1'b0;
         refresh_sr <=  'd0;
         refresh_ok <= 1'b0;
+        write_cycle <= 1'b0;
+        read_cycle  <= 1'b0;
+        hold_bus    <= 1'b1;
     end else if( initialize ) begin
         if( |wait_cnt ) begin
             wait_cnt <= wait_cnt-14'd1;
@@ -176,10 +212,12 @@ always @(posedge clk)
                 end
             endcase
         end
-    end else  begin // regular operation
-        if( cnt_state!=3'd0 ||
-            (!downloading && (read_req || refresh_ok) ) || /* when not downloading */
-            ( downloading && (writeon  || readprog )) /* when downloading */) begin
+    end else begin 
+    //////////////////////////////////////////////////////////////////////////////////
+    // regular operation
+        if( cnt_state!=3'd0 || refresh_ok ||
+            (!downloading && read_req  ) || /* when not downloading */
+            ( downloading && (writeon || readprog ) ) /* when downloading */) begin
             if( cnt_state==3'd4 || (refresh_cycle&&cnt_state==3'd3) )
                 cnt_state <= 3'd0; // Autorefresh needs only 60ns
             else
@@ -190,18 +228,19 @@ always @(posedge clk)
             SDRAM_CMD <= CMD_NOP;
         end
         3'd0: begin // activate or refresh
-            write_data     <= prog_data;
+            dq_out         <= downloading ? { prog_data, prog_data } : data_write;
             write_cycle    <= 1'b0;
             read_cycle     <= 1'b0;
             refresh_cycle  <= 1'b0;
             burst_done     <= 1'b0;
+            hold_bus       <= 1'b1;
             //if( read_cycle) begin
             //    data_read[15: 0] <= data_read[31:16];
             //    data_read[31:16] <= SDRAM_DQ;
-            //    data_rdy         <= 1'b1;
+            //    dq_rdy           <= 1'b1;
             //end
             //else
-            data_rdy <= 1'b0;
+            dq_rdy   <= 1'b0;
             {SDRAM_DQMH, SDRAM_DQML } <= 2'b00;
             if( set_burst ) begin
                 SDRAM_CMD <= CMD_LOAD_MODE;
@@ -216,26 +255,27 @@ always @(posedge clk)
                     SDRAM_CMD <= CMD_ACTIVATE;
                     { SDRAM_A, col_addr } <= prog_addr;
                     refresh_cycle <= 1'b0;
-                    write_cycle   <= writeon;
+                    write_cycle   <=  writeon;
                     read_cycle    <= ~writeon;
                     refresh_sr    <= 2'd0;
                     refresh_ok    <= 1'b0;
+                    sdram_ack     <= 1'b1;
                 end
-                else if( (read_req || refresh_ok) && !downloading ) begin
+                else if( (read_req || refresh_ok) ) begin
                     SDRAM_CMD <=
                         !read_req ? CMD_AUTOREFRESH : CMD_ACTIVATE;
                     { SDRAM_A, col_addr } <= sdram_addr;
                     refresh_cycle <= !read_req;
-                    read_cycle    <= read_req;
+                    read_cycle    <= read_req && sdram_rnw;
                     sdram_ack     <= read_req;
-                    write_cycle   <= 1'b0;
+                    write_cycle   <= read_req && !sdram_rnw;
                     refresh_sr    <= 2'd0;
                     refresh_ok    <= 1'b0;
                 end
                 else begin
-                    if( !downloading && refresh_en )
+                    if( refresh_en )
                         { refresh_ok, refresh_sr } <=  { refresh_sr, 1'b1 };
-                    else begin // no autorefresh during downloading
+                    else begin
                         refresh_sr <= 2'd0;
                         refresh_ok <= 1'b0;
                     end
@@ -246,23 +286,34 @@ always @(posedge clk)
             sdram_ack     <= 1'b0;
             SDRAM_A[12:9] <= 4'b0010; // auto precharge;
             SDRAM_A[ 8:0] <= col_addr;
-            {SDRAM_DQMH, SDRAM_DQML } <= write_cycle ? prog_mask : 2'b00;
-            SDRAM_WRITE <= write_cycle;
+            {SDRAM_DQMH, SDRAM_DQML } <= write_cycle ? 
+                ( downloading ? prog_mask : sdram_wrmask )
+                : 2'b00; // reads always take the two bytes in
             SDRAM_CMD   <= write_cycle ? CMD_WRITE :
                 refresh_cycle ? CMD_NOP : CMD_READ;
-            data_rdy    <= 1'b0;
+            dq_rdy      <= 1'b0;
+        end
+        3'd2: begin
+            SDRAM_CMD <= CMD_NOP;
+            if( read_cycle ) hold_bus <= 1'b0;
         end
         3'd3: begin
-            if( read_cycle) begin
-                data_read[31:16] <= SDRAM_DQ;
-            end
             SDRAM_CMD <= CMD_NOP;
+            if( read_cycle) begin
+                dq_ff <= SDRAM_DQ;
+            end
+            if( write_cycle ) begin
+                dq_rdy      <= 1'b1;
+                cnt_state   <= 3'd0;
+                write_cycle <= 1'b0;
+            end
         end
         3'd4: begin
             if( read_cycle) begin
-                data_read[15: 0] <= data_read[31:16];
-                data_read[31:16] <= SDRAM_DQ;
-                data_rdy         <= 1'b1;
+                dq_ff0   <= dq_ff;
+                dq_ff    <= SDRAM_DQ;
+                dq_rdy   <= 1'b1;   // data_ready marks that new data is ready
+                hold_bus <= 1'b1;
             end
             SDRAM_CMD <= CMD_NOP;
         end

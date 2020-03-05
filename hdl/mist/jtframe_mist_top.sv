@@ -59,8 +59,8 @@ module `MISTTOP(
     `ifdef SIMULATION
     ,output         sim_pxl_cen,
     output          sim_pxl_clk,
-    output          sim_vs,
-    output          sim_hs
+    output          sim_vb,
+    output          sim_hb
     `endif
 );
 
@@ -115,9 +115,19 @@ wire [21:0]   sdram_addr;
 wire [31:0]   data_read;
 wire          loop_rst;
 wire          downloading, dwnld_busy;
-wire [21:0]   ioctl_addr;
+wire [22:0]   ioctl_addr;
 wire [ 7:0]   ioctl_data;
 wire          ioctl_wr;
+
+wire [ 1:0]   sdram_wrmask;
+wire          sdram_rnw;
+wire [15:0]   data_write;
+
+`ifndef JTFRAME_WRITEBACK
+assign sdram_wrmask = 2'b11;
+assign sdram_rnw    = 1'b1;
+assign data_write   = 16'h00;
+`endif
 
 wire rst_req   = status[0];
 wire join_joys = status[32'he];
@@ -145,8 +155,8 @@ wire [15:0] snd_left, snd_right;
 assign snd_right = snd_left;
 `endif
 
-wire [9:0] game_joy1, game_joy2;
-wire [1:0] game_coin, game_start;
+wire [9:0] game_joy1, game_joy2, game_joy3, game_joy4;
+wire [3:0] game_coin, game_start;
 wire game_rst;
 wire [3:0] gfx_en;
 // SDRAM
@@ -182,22 +192,22 @@ wire       pxl_cen, pxl2_cen;
 `ifdef SIMULATION
 assign sim_pxl_clk = clk_sys;
 assign sim_pxl_cen = pxl_cen;
-assign sim_vs = ~LVBL_dly;
-assign sim_hs = ~LHBL_dly;
+assign sim_vb = ~LVBL_dly;
+assign sim_hb = ~LHBL_dly;
 `endif
 
 `ifndef SIGNED_SND
 `define SIGNED_SND 1'b1
 `endif
 
-`ifndef THREE_BUTTONS
-`define THREE_BUTTONS 1'b1
+`ifndef BUTTONS
+`define BUTTONS 2
 `endif
 
 jtframe_mist #( 
     .CONF_STR     ( CONF_STR       ),
     .SIGNED_SND   ( `SIGNED_SND    ),
-    .THREE_BUTTONS( `THREE_BUTTONS ),
+    .BUTTONS      ( `BUTTONS       ),
     .COLORW       ( COLORW         )
     `ifdef VIDEO_WIDTH
     ,.VIDEO_WIDTH   ( `VIDEO_WIDTH   )
@@ -267,6 +277,10 @@ u_frame(
     .data_read      ( data_read      ),
     .data_rdy       ( data_rdy       ),
     .refresh_en     ( refresh_en     ),
+    // write support
+    .sdram_wrmask   ( sdram_wrmask   ),
+    .sdram_rnw      ( sdram_rnw      ),
+    .data_write     ( data_write     ),
 //////////// board
     .rst            ( rst            ),
     .rst_n          ( rst_n          ), // unused
@@ -282,6 +296,8 @@ u_frame(
     // joystick
     .game_joystick1 ( game_joy1      ),
     .game_joystick2 ( game_joy2      ),
+    .game_joystick3 ( game_joy3      ),
+    .game_joystick4 ( game_joy4      ),
     .game_coin      ( game_coin      ),
     .game_start     ( game_start     ),
     .game_service   (                ), // unused
@@ -294,12 +310,7 @@ u_frame(
     .dip_flip       ( dip_flip       ),
     .dip_fxlevel    ( dip_fxlevel    ),
     // Debug
-    .gfx_en         ( gfx_en         ),
-    // Unused
-    .game_pause     (                ),
-    .hdmi_arx       (                ),
-    .hdmi_ary       (                ),
-    .vertical_n     (                )
+    .gfx_en         ( gfx_en         )
 );
 
 `ifdef SIMULATION
@@ -314,9 +325,11 @@ u_frame(
     assign game_start[1] = 1'b1;
     assign game_coin[1]  = 1'b1;
     assign game_joystick2 = ~10'd0;
+    assign game_joystick3 = ~10'd0;
+    assign game_joystick4 = ~10'd0;
     assign game_joystick1[9:7] = 3'b111;
-    assign sim_vs = vs;
-    assign sim_hs = hs;
+    assign sim_vb = vs;
+    assign sim_hb = hs;
 `endif
 `endif
 
@@ -338,8 +351,12 @@ u_game(
 
     .start_button( game_start     ),
     .coin_input  ( game_coin      ),
-    .joystick1   ( game_joy1[6:0] ),
-    .joystick2   ( game_joy2[6:0] ),
+    .joystick1   ( game_joy1[7:0] ),
+    .joystick2   ( game_joy2[7:0] ),
+    `ifdef JTFRAME_4PLAYERS
+    .joystick3    ( game_joy3[7:0]   ),
+    .joystick4    ( game_joy4[7:0]   ),
+    `endif
 
     // Sound control
     .enable_fm   ( enable_fm      ),
@@ -353,7 +370,6 @@ u_game(
     .prog_mask   ( prog_mask      ),
     .prog_we     ( prog_we        ),
     .prog_rd     ( prog_rd        ),
-
     // ROM load
     .downloading ( downloading    ),
     .dwnld_busy  ( dwnld_busy     ),
@@ -364,6 +380,11 @@ u_game(
     .sdram_ack   ( sdram_ack      ),
     .data_rdy    ( data_rdy       ),
     .refresh_en  ( refresh_en     ),
+    `ifdef JTFRAME_WRITEBACK
+    .sdram_wrmask( sdram_wrmask   ),
+    .sdram_rnw   ( sdram_rnw      ),
+    .data_write  ( data_write     ),
+    `endif
 
     // DIP switches
     .status      ( status         ),

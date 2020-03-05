@@ -17,7 +17,8 @@
     Date: 25-9-2019 */
 
 module jtframe_board #(parameter
-    THREE_BUTTONS           = 0,
+    BUTTONS                 = 2, // number of buttons used by the game
+    // coin and start buttons will be mapped.
     GAME_INPUTS_ACTIVE_LOW  = 1'b1,
     COLORW                  = 4,
     VIDEO_WIDTH             = 384,
@@ -41,6 +42,10 @@ module jtframe_board #(parameter
     output [31:0]     data_read,
     output            data_rdy,
     output            loop_rst,
+    // Write back to SDRAM
+    input  [ 1:0]     sdram_wrmask,
+    input             sdram_rnw,
+    input  [15:0]     data_write,
     // ROM programming
     input  [21:0]     prog_addr,
     input  [ 7:0]     prog_data,
@@ -65,10 +70,14 @@ module jtframe_board #(parameter
     // joystick
     input     [15:0]  board_joystick1,
     input     [15:0]  board_joystick2,
+    input     [15:0]  board_joystick3,
+    input     [15:0]  board_joystick4,
     output reg [9:0]  game_joystick1,
     output reg [9:0]  game_joystick2,
-    output reg [1:0]  game_coin,
-    output reg [1:0]  game_start,
+    output reg [9:0]  game_joystick3,
+    output reg [9:0]  game_joystick4,
+    output reg [3:0]  game_coin,
+    output reg [3:0]  game_start,
     output reg        game_service,
     // DIP and OSD settings
     input     [31:0]  status,
@@ -183,12 +192,12 @@ always @(posedge clk_sys)
     end
 
 wire [9:0] key_joy1, key_joy2;
-wire [1:0] key_start, key_coin;
+wire [3:0] key_start, key_coin;
 wire [3:0] key_gfx;
 wire       key_service;
 
 `ifndef SIMULATION
-jtgng_keyboard u_keyboard(
+jtframe_keyboard u_keyboard(
     .clk         ( clk_sys       ),
     .rst         ( rst           ),
     // ps2 interface
@@ -214,17 +223,18 @@ assign key_pause   = 1'b0;
 assign key_service = 1'b0;
 `endif
 
-reg [15:0] joy1_sync, joy2_sync;
+reg [15:0] joy1_sync, joy2_sync, joy3_sync, joy4_sync;
 
 always @(posedge clk_sys) begin
     joy1_sync <= board_joystick1;
     joy2_sync <= board_joystick2;
+    joy3_sync <= board_joystick3;
+    joy4_sync <= board_joystick4;
 end
 
-localparam START1_BIT = 6+THREE_BUTTONS;
-localparam START2_BIT = 7+THREE_BUTTONS;
-localparam COIN_BIT   = 8+THREE_BUTTONS;
-localparam PAUSE_BIT  = 9+THREE_BUTTONS;
+localparam START_BIT  = 6+(BUTTONS-2);
+localparam COIN_BIT   = 7+(BUTTONS-2);
+localparam PAUSE_BIT  = 8+(BUTTONS-2);
 
 reg last_pause, last_joypause, last_reset;
 reg [3:0] last_gfx;
@@ -274,20 +284,22 @@ always @(posedge clk_sys)
         // as indicated in the instance parameter
         
         `ifdef SIM_INPUTS
-        game_coin  = {2{invert_inputs}} ^ sim_inputs[frame_cnt][1:0];
-        game_start = {2{invert_inputs}} ^ sim_inputs[frame_cnt][3:2];
+        game_coin  = {4{invert_inputs}} ^ { 2'b0, sim_inputs[frame_cnt][1:0] };
+        game_start = {4{invert_inputs}} ^ { 2'b0, sim_inputs[frame_cnt][3:2] };
         game_joystick1 <= {10{invert_inputs}} ^ { 4'd0, sim_inputs[frame_cnt][9:4]};
         `else
         game_joystick1 <= apply_rotation(joy1_sync | key_joy1, rot_control, invert_inputs);
-        game_coin      <= {2{invert_inputs}} ^ 
-            ({joy2_sync[COIN_BIT],joy1_sync[COIN_BIT]} | key_coin);
+        game_coin      <= {4{invert_inputs}} ^ 
+            ({  joy4_sync[COIN_BIT],joy3_sync[COIN_BIT],
+                joy2_sync[COIN_BIT],joy1_sync[COIN_BIT]} | key_coin);
         
-        game_start     <= {2{invert_inputs}} ^ 
-            ({joy1_sync[START2_BIT],joy1_sync[START1_BIT]} |
-             {joy2_sync[START2_BIT],joy2_sync[START1_BIT]} | key_start);
+        game_start     <= {4{invert_inputs}} ^ 
+            ({  joy4_sync[START_BIT],joy3_sync[START_BIT],  
+                joy2_sync[START_BIT],joy1_sync[START_BIT]} | key_start);
         `endif
         game_joystick2 <= apply_rotation(joy2_sync | key_joy2, rot_control, invert_inputs);
-
+        // rotation is only applied to the first two players
+        
         soft_rst <= key_reset && !last_reset;
 
         for(cnt=0; cnt<4; cnt=cnt+1)
@@ -337,6 +349,11 @@ jtframe_sdram u_sdram(
     .data_read      ( data_read     ),
     .data_rdy       ( data_rdy      ),
     .refresh_en     ( refresh_en    ),
+    // Write back to SDRAM
+    .sdram_wrmask   ( sdram_wrmask  ),
+    .sdram_rnw      ( sdram_rnw     ),
+    .data_write     ( data_write    ),
+
     // ROM-load interface
     .downloading    ( downloading   ),
     .prog_we        ( prog_we       ),
@@ -414,6 +431,7 @@ function [7:0] extend8b;    // the input width is COLORW+1
     endcase
 endfunction
 
+`ifndef NOVIDEO
 generate    
     if( ROTATE_FX ) begin
         wire hblank = ~LHBL;
@@ -661,7 +679,18 @@ generate
                 .gamma_bus      ( gamma_bus     )
             );
         end
+        5: begin // by pass
+            assign scan2x_r    = game_r;
+            assign scan2x_g    = game_g;
+            assign scan2x_b    = game_b;
+            assign scan2x_hs   = hs;
+            assign scan2x_vs   = vs;
+            assign scan2x_clk  = clk_sys;
+            assign scan2x_cen  = pxl_cen;
+            assign scan2x_de   = LVBL && LHBL;
+        end
     endcase
 endgenerate
+`endif
 
 endmodule // jtgng_board

@@ -78,6 +78,7 @@ arcade_vga #(DW) vga
 
 wire [DW-1:0] RGB_out;
 wire rhs,rvs,rhblank,rvblank;
+wire scandoubler;
 
 screen_rotate #(WIDTH,HEIGHT,DW,4,CCW) rotator
 (
@@ -124,10 +125,10 @@ endgenerate
 reg norot;
 always @(posedge VGA_CLK) norot <= no_rotate | direct_video;
 
+wire [2:0] sl = fx ? fx - 1'd1 : 3'd0;
+assign scandoubler = fx || forced_scandoubler;
 assign HDMI_CLK = VGA_CLK;
 assign HDMI_SL  = (no_rotate & ~direct_video) ? 2'd0 : sl[1:0];
-wire [2:0] sl = fx ? fx - 1'd1 : 3'd0;
-wire scandoubler = fx || forced_scandoubler;
 
 video_mixer #(WIDTH+4, 1, GAMMA) video_mixer
 (
@@ -172,6 +173,7 @@ endmodule
 //  8 : 3R 3G 2B
 //  9 : 3R 3G 3B
 // 12 : 4R 4G 4B
+// 24 : 8R 8G 8B
 
 module arcade_fx #(parameter WIDTH=320, DW=8, GAMMA=1)
 (
@@ -234,12 +236,15 @@ arcade_vga #(DW) vga
 	.VGA_VBL(VBL)
 );
 
-assign HDMI_CLK = VGA_CLK;
-assign HDMI_SL  = sl[1:0];
 wire [2:0] sl = fx ? fx - 1'd1 : 3'd0;
 wire scandoubler = fx || forced_scandoubler;
 
-video_mixer #(WIDTH+4, 1, GAMMA) video_mixer
+assign HDMI_CLK = VGA_CLK;
+assign HDMI_SL  = sl[1:0];
+
+localparam HALF_DEPTH = DW!=24;
+
+video_mixer #(WIDTH+4, HALF_DEPTH, GAMMA) video_mixer
 (
 	.clk_vid(HDMI_CLK),
 	.ce_pix(CE),
@@ -249,9 +254,9 @@ video_mixer #(WIDTH+4, 1, GAMMA) video_mixer
 	.hq2x(fx==1),
 	.gamma_bus(gamma_bus),
 
-	.R(R[7:4]),
-	.G(G[7:4]),
-	.B(B[7:4]),
+	.R( HALF_DEPTH ? R[7:4] : R ),
+	.G( HALF_DEPTH ? G[7:4] : G ),
+	.B( HALF_DEPTH ? B[7:4] : B ),
 
 	.HSync(HS),
 	.VSync(VS),
@@ -278,7 +283,7 @@ endmodule
 
 //////////////////////////////////////////////////////////
 
-module arcade_vga #(parameter DW)
+module arcade_vga #(parameter DW=12)
 (
 	input          clk_video,
 	input          ce_pix,
@@ -309,7 +314,7 @@ sync_fix sync_h(VGA_CLK, VSync, vs_fix);
 
 reg [DW-1:0] RGB_fix;
 
-always @(posedge VGA_CLK) begin
+always @(posedge VGA_CLK) begin : block2
 	reg old_ce;
 	old_ce <= ce_pix;
 	VGA_CE <= 0;
@@ -341,6 +346,9 @@ generate
 		assign VGA_R = {RGB_fix[8:6],RGB_fix[8:6],RGB_fix[8:7]};
 		assign VGA_G = {RGB_fix[5:3],RGB_fix[5:3],RGB_fix[5:4]};
 		assign VGA_B = {RGB_fix[2:0],RGB_fix[2:0],RGB_fix[2:1]};
+	end
+	else if(DW == 24) begin
+		assign { VGA_R, VGA_G, VGA_B } = RGB_fix;
 	end
 	else begin
 		assign VGA_R = {RGB_fix[11:8],RGB_fix[11:8]};
@@ -399,23 +407,25 @@ localparam aw = $clog2(memsize); // resolutions up to ~ 512x256
 reg [aw-1:0] addr_in, addr_out;
 reg we_in;
 reg buff = 0;
-
-(* ramstyle="no_rw_check" *) reg [DEPTH-1:0] ram[memsize];
-always @ (posedge clk) if (en_we) ram[addr_in] <= video_in;
-always @ (posedge clk) out <= ram[addr_out];
-
+wire en_we;
 reg [DEPTH-1:0] out; 
 reg [DEPTH-1:0] vout;
 
+(* ramstyle="no_rw_check" *) reg [DEPTH-1:0] ram[0:memsize-1];
+always @ (posedge clk) if (en_we) ram[addr_in] <= video_in;
+always @ (posedge clk) out <= ram[addr_out];
+
+
 assign video_out = vout;
 
-wire en_we = ce & ~blank & en_x & en_y;
+integer xpos, ypos;
 wire en_x = (xpos<WIDTH);
 wire en_y = (ypos<HEIGHT);
-integer xpos, ypos;
-
 wire blank = hblank | vblank;
-always @(posedge clk) begin
+
+assign en_we = ce & ~blank & en_x & en_y;
+
+always @(posedge clk) begin : block3
 	reg old_blank, old_vblank;
 	reg [aw-1:0] addr_row;
 
@@ -447,7 +457,7 @@ always @(posedge clk) begin
 	end
 end
 
-always @(posedge clk) begin
+always @(posedge clk) begin : block0
 	reg old_buff;
 	reg hs;
 	reg ced;

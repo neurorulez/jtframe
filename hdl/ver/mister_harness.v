@@ -14,7 +14,9 @@ module mister_harness(
     input  [7:0]       VGA_G,
     input  [7:0]       VGA_B,
     input              VGA_HS,
-    input              VGA_VS,    
+    input              VGA_VS,
+    input              VGA_VB,
+    input              VGA_HB,
     // SDRAM
     input              dwnld_busy,
     inout [15:0]       SDRAM_DQ,
@@ -51,44 +53,18 @@ integer fincnt;
 
 ////////////////////////////////////////////////////////////////////
 // video output dump
-`ifdef DUMP_VIDEO
-integer fvideo;
-initial begin
-    fvideo = $fopen("video.bin","wb");
-end
-/*
-reg VGA_VB=1'b1, VGA_HB=1'b1;
-reg last_VS, last_HS;
 
-always @(posedge VGA_CE) begin
-    last_VS <= VGA_VS;
-    last_HS <= VGA_HS;
-    if( VGA_HS && !last_HS ) begin
-        VGA_HB <= 1'b1;
-    end
-    if( VGA_VS && !last_VS ) begin
-        VGA_VB <= 1'b1;
-    end
-    if( VGA_DE ) begin
-        VGA_VB <= 1'b0;
-        VGA_HB <= 1'b0;
-    end
-end
-*/
-wire [15:0] video_dump = { 2'b0, VGA_VS, VGA_HS, VGA_R[7:4], VGA_G[7:4], VGA_B[7:4]  };
-
-// Define VIDEO_START with the first frame number for which
-// video will be dumped. If undefined, it will start from frame 0
-`ifndef VIDEO_START
-`define VIDEO_START 0
-`endif
-
-always @(posedge VGA_CLK) if(VGA_CE && frame_cnt>=`VIDEO_START ) begin
-    $fwrite(fvideo,"%u", video_dump);
-end
-
-`endif
-
+video_dump u_dump(
+    .pxl_clk    ( VGA_CLK       ),
+    .pxl_cen    ( VGA_CE        ),
+    .pxl_hb     ( VGA_HB        ),
+    .pxl_vb     ( VGA_VB        ),
+    .red        ( VGA_R[7:4]    ),
+    .green      ( VGA_G[7:4]    ),
+    .blue       ( VGA_B[7:4]    ),
+    .frame_cnt  ( frame_cnt     )
+    //input        downloading
+);
 
 ////////////////////////////////////////////////////////////////////
 always @(posedge clk50)
