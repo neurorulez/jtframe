@@ -169,8 +169,6 @@ assign VGA_F1=field;
 
 wire   joy_split, joy_mdsel;
 wire   [5:0] joy_in = {USER_IN[6],USER_IN[3],USER_IN[5],USER_IN[7],USER_IN[1],USER_IN[2]};
-assign USER_OUT  = |status[31:30] ? {3'b111,joy_split,3'b111,joy_mdsel} : '1;
-assign USER_MODE = |status[31:30] ;
 
 ////////////////////   CLOCKS   ///////////////////
 
@@ -234,8 +232,8 @@ wire        rst_req   = RESET | status[0] | buttons[1];
 assign LED_DISK  = 2'b0;
 assign LED_POWER = 2'b0;
 
-assign USER_OUT  = |status[31:30] ? {5'b11111,JOY_CLK,JOY_LOAD} : '1;
-assign USER_MODE = |status[31:30];
+assign USER_OUT  = |status[31:30] ? {3'b111,joy_split,3'b111,joy_mdsel} : '1;
+assign USER_MODE = |status[31:30] ;
 
 // SDRAM
 wire         loop_rst;
