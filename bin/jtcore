@@ -14,7 +14,8 @@ JTCORE compilation tool. (c) Jose Tejada 2019, @topapate
                     MISTER_VIDEO_MIXER  uses the Mr video modules
                     JTFRAME_SCAN2X      uses simple scan doubler from JTFRAME
                     MISTER_NOHDMI       skips MiSTer HDMI related logic. Speeds up compilation.
-    -q          quick compilation. Defines NOSUND and MISTER_NOHDMI.
+    -qq         very quick compilation. Defines NOSUND and MISTER_NOHDMI. Does not alter compilation target.
+    -q          quick compilation. Defines MISTER_NOHDMI. Set MiSTer as target.
     -git        adds the release file to git
     -mister     compiles MiSTer version. Default is MiST.
     -seed       sets random seed for compilation
@@ -115,7 +116,10 @@ while [ $# -gt 0 ]; do
             MACROS="$1 $MACROS"
             ;;
         -q)
-            MACROS="$1 NOSOUND MISTER_NOHDMI";;
+            MACROS="$MACROS MISTER_NOHDMI"
+            MIST=mister;;
+        -qq)
+            MACROS="$MACROS NOSOUND MISTER_NOHDMI";;
         -zip | -z)
             ZIP=TRUE;;
         -help | -h)

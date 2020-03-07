@@ -1160,7 +1160,7 @@ sync_fix sync_h(clk_vid, hs_emu, hs_fix);
 assign audio_mix = 0;
 assign {ADC_SCK, ADC_SDI, ADC_CONVST} = 0;
 wire  [6:0] user_out, user_in;
-wire        user_mode,user_osd;
+wire        user_mode, user_osd;
 
 `ifndef USE_SDRAM
 assign {SDRAM_DQ, SDRAM_A, SDRAM_BA, SDRAM_CLK, SDRAM_CKE, SDRAM_DQML, SDRAM_DQMH, SDRAM_nWE, SDRAM_nCAS, SDRAM_nRAS, SDRAM_nCS} = {39'bZ};

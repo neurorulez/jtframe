@@ -204,7 +204,8 @@ wire [5:0] osd_g_o;
 wire [5:0] osd_b_o;
 wire       HSync = scan2x_enb ? ~hs : scan2x_hs;
 wire       VSync = scan2x_enb ? ~vs : scan2x_vs;
-wire       CSync = ~(HSync ^ VSync);
+wire       HSync_osd, VSync_osd;
+wire       CSync_osd = ~(HSync_osd ^ VSync_osd);
 
 function [5:0] extend_color;
     input [COLORW-1:0] a;
@@ -221,6 +222,7 @@ endfunction
 wire [5:0] game_r6 = extend_color( game_r );
 wire [5:0] game_g6 = extend_color( game_g );
 wire [5:0] game_b6 = extend_color( game_b );
+
 
 osd #(0,0,3'b110) osd (
    .clk_sys    ( scan2x_enb ? clk_sys : clk_vga ),
@@ -241,6 +243,8 @@ osd #(0,0,3'b110) osd (
    .R_out      ( osd_r_o      ),
    .G_out      ( osd_g_o      ),
    .B_out      ( osd_b_o      ),
+   .HSync_out  ( HSync_osd    ),
+   .VSync_out  ( VSync_osd    ),
 
    .osd_shown  ( osd_shown    )
 );
@@ -262,8 +266,8 @@ assign VIDEO_G  = ypbpr? Y:osd_g_o;
 assign VIDEO_B  = ypbpr?Pb:osd_b_o;
 // a minimig vga->scart cable expects a composite sync signal on the VIDEO_HS output.
 // and VCC on VIDEO_VS (to switch into rgb mode)
-assign VIDEO_HS = (scan2x_enb | ypbpr) ? CSync : HSync;
-assign VIDEO_VS = (scan2x_enb | ypbpr) ? 1'b1 : VSync;
+assign VIDEO_HS = (scan2x_enb | ypbpr) ? CSync_osd : HSync_osd;
+assign VIDEO_VS = (scan2x_enb | ypbpr) ? 1'b1 : VSync_osd;
 `else
 assign VIDEO_R  = game_r;// { game_r, game_r[3:2] };
 assign VIDEO_G  = game_g;// { game_g, game_g[3:2] };

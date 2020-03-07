@@ -98,8 +98,8 @@ module emu
     // 1 - D-/TX
     // 2..6 - USR2..USR6
     // Set USER_OUT to 1 to read from USER_IN.
-    output  	  USER_OSD,
-	output		  USER_MODE,
+    output        USER_OSD,
+    output        USER_MODE,
     input   [6:0] USER_IN,
     output  [6:0] USER_OUT
     `ifdef SIMULATION
@@ -137,7 +137,7 @@ localparam CONF_STR = {
     `ifdef HAS_TESTMODE
     "O6,Test mode,OFF,ON;",
     `endif
-	 "OUV,Serial SNAC DB15,Off,1 Player,2 Players;",	 
+     "OUV,Serial SNAC DB15,Off,1 Player,2 Players;",    
     `ifdef JT12
     "O7,PSG,ON,OFF;",
     "O8,FM ,ON,OFF;",
@@ -151,8 +151,11 @@ localparam CONF_STR = {
         `endif
     `endif
     `SEPARATOR
-    //`CORE_OSD
-	 "DIP;",
+    `ifdef JTFRAME_MRA_DIP
+    "DIP;",
+    `else
+    `CORE_OSD
+    `endif
     `SEPARATOR
     "R0,Reset;",
     `CORE_KEYMAP
@@ -214,10 +217,10 @@ pll pll(
 wire [31:0] status;
 wire [ 1:0] buttons;
 
-wire [7:0] dipsw_a, dipsw_b;
-wire [1:0] dip_fxlevel;
-wire       enable_fm, enable_psg;
-wire       dip_pause, dip_flip, dip_test;
+wire [ 7:0] dipsw_a, dipsw_b;
+wire [ 1:0] dip_fxlevel;
+wire        enable_fm, enable_psg;
+wire        dip_pause, dip_flip, dip_test;
 wire [31:0] dipsw;
 
 wire        ioctl_rom_wr;
@@ -324,7 +327,7 @@ u_frame(
     .SDRAM_BA       ( SDRAM_BA       ),
     .SDRAM_CKE      ( SDRAM_CKE      ),
     // ROM load
-	 .ioctl_addr     ( ioctl_addr     ),
+    .ioctl_addr     ( ioctl_addr     ),
     .ioctl_data     ( ioctl_data     ),
     .ioctl_rom_wr   ( ioctl_rom_wr   ),
     .prog_addr      ( prog_addr      ),
@@ -369,7 +372,7 @@ u_frame(
     .dip_pause      ( dip_pause      ),
     .dip_flip       ( dip_flip       ),
     .dip_fxlevel    ( dip_fxlevel    ),
-	 .dipsw          ( dipsw          ),
+    .dipsw          ( dipsw          ),
     // screen
     .rotate         (                ),
     // HDMI
@@ -393,11 +396,11 @@ u_frame(
     .scan2x_clk     ( VGA_CLK        ),
     .scan2x_cen     ( VGA_CE         ),
     .scan2x_de      ( VGA_DE         ),
-	 //DB15
-	 .JOY_CLK(JOY_CLK),
-	 .JOY_LOAD(JOY_LOAD),
-	 .JOY_DATA(JOY_DATA),
-     .USER_OSD(USER_OSD),	 
+     //DB15
+    .JOY_CLK        ( JOY_CLK        ),
+    .JOY_LOAD       ( JOY_LOAD       ),
+    .JOY_DATA       ( JOY_DATA       ),
+    .USER_OSD       ( USER_OSD       ), 
     // Debug
     .gfx_en         ( gfx_en         )
 );
@@ -472,11 +475,11 @@ assign sim_pxl_cen = pxl_cen;
     `endif
 
     // DIP switches
-    .status       ( dipsw            ),
+    .status       ( status           ),
     .dip_pause    ( dip_pause        ),
     .dip_flip     ( dip_flip         ),
     .dip_test     ( dip_test         ),
-    .dip_fxlevel  ( dip_fxlevel      ),  
+    .dip_fxlevel  ( dip_fxlevel      ),
 
     `ifdef STEREO_GAME
     .snd_left     ( AUDIO_L          ),

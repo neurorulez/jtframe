@@ -70,6 +70,11 @@ This module may result in timing errors in MiSTer because sometimes the compiler
 
 SDRAM is treated in top level modules as a read-only memory (except for the download process). If the game core needs to write to the SDRAM the **JTFRAME_WRITEBACK** macro must be defined.
 
+DIP switches in MRA files
+=========================
+
+To enable support of DIP switches in MRA files define the macro **JTFRAME_MRA_DIP**. The maximum length of DIP switches is 32 bits.
+
 Joysticks
 =========
 By default the frame supports two joysticks only and will try to connect to game modules based on this assumption. For games that need four joysticks, define the macro **JTFRAME_4PLAYERS**.

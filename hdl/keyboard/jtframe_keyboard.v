@@ -55,8 +55,8 @@ always @(posedge clk) begin
       key_extended <= 1'b0;
       key_joy1     <=  'd0;
       key_joy2     <=  'd0;
-      key_coin     <= 2'd0;
-      key_start    <= 2'd0;
+      key_coin     <= 4'd0;
+      key_start    <= 4'd0;
       key_reset    <= 1'b0;
       key_pause    <= 1'b0;
       key_service  <= 1'b0;
@@ -93,6 +93,9 @@ always @(posedge clk) begin
                     // coins
                     9'h2e                : key_coin[0] <= !key_released;  // 1st coin
                     9'h36: key_coin[1] <= !key_released;  // 2nd coin
+                    9'h3d: key_coin[2] <= !key_released;  // 3rd coin
+                    9'h3e: key_coin[3] <= !key_released;  // 4th coin
+                    // start
                     9'h16, 9'h05 /* 1, F1 */: key_start[0] <= !key_released; // 1P start
                     9'h1e, 9'h06 /* 2, F2 */: key_start[1] <= !key_released; // 2P start
                     9'h26        /* 3     */: key_start[2] <= !key_released; // 3P start

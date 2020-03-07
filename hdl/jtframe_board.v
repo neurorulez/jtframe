@@ -299,6 +299,8 @@ always @(posedge clk_sys)
         `endif
         game_joystick2 <= apply_rotation(joy2_sync | key_joy2, rot_control, invert_inputs);
         // rotation is only applied to the first two players
+        game_joystick3 <= {10{invert_inputs}} ^ board_joystick3[9:0];
+        game_joystick4 <= {10{invert_inputs}} ^ board_joystick4[9:0];
         
         soft_rst <= key_reset && !last_reset;
 

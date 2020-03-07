@@ -25,6 +25,10 @@ module osd (
 	output reg [5:0] G_out,
 	output reg [5:0] B_out,
 
+	output reg       HSync_out,
+	output reg       VSync_out,
+
+
 	output reg	 osd_shown
 );
 
@@ -207,25 +211,25 @@ wire	   back_pixel = 1'b1;
 `endif
 
 always @(posedge clk_sys) begin
-    if(ce_pix) begin
-		osd_buffer_addr <= rotate[0] ? {rotate[1] ? osd_hcnt_next2[7:5] : ~osd_hcnt_next2[7:5],
-		                                rotate[1] ? (doublescan ? ~osd_vcnt[7:0] : ~{osd_vcnt[6:0], 1'b0}) :
-										            (doublescan ?  osd_vcnt[7:0]  : {osd_vcnt[6:0], 1'b0})} :
-                                        // no rotation
-		                               {doublescan ? osd_vcnt[7:5] : osd_vcnt[6:4], osd_hcnt_next2[7:0]};
+	osd_buffer_addr <= rotate[0] ? {rotate[1] ? osd_hcnt_next2[7:5] : ~osd_hcnt_next2[7:5],
+	                                rotate[1] ? (doublescan ? ~osd_vcnt[7:0] : ~{osd_vcnt[6:0], 1'b0}) :
+									            (doublescan ?  osd_vcnt[7:0]  : {osd_vcnt[6:0], 1'b0})} :
+                                    // no rotation
+	                               {doublescan ? osd_vcnt[7:5] : osd_vcnt[6:4], osd_hcnt_next2[7:0]};
 
-		osd_pixel <= rotate[0]  ? osd_byte[rotate[1] ? osd_hcnt_next[4:2] : ~osd_hcnt_next[4:2]] :
-		                          osd_byte[doublescan ? osd_vcnt[4:2] : osd_vcnt[3:1]];
-		`ifndef OSD_NOBCK
-		back_pixel <= rotate[0]  ? 
-                                  back_byte[rotate[1] ? osd_hcnt_next[4:2] : ~osd_hcnt_next[4:2]] :
-                                  // no rotation:
-                                  back_byte[doublescan ? osd_vcnt[4:2] : osd_vcnt[3:1]];
-        `endif
-        R_out <= !osd_de ? R_in : { {2{osd_pixel}}, {OSD_COLOR[5:4]&back_pixel}, R_in[5:4]};
-        G_out <= !osd_de ? G_in : { {2{osd_pixel}}, {OSD_COLOR[3:2]&back_pixel}, G_in[5:4]};
-        B_out <= !osd_de ? B_in : { {2{osd_pixel}}, {OSD_COLOR[1:0]&back_pixel}, B_in[5:4]};
-	end
+	osd_pixel <= rotate[0]  ? osd_byte[rotate[1] ? osd_hcnt_next[4:2] : ~osd_hcnt_next[4:2]] :
+	                          osd_byte[doublescan ? osd_vcnt[4:2] : osd_vcnt[3:1]];
+	`ifndef OSD_NOBCK
+	back_pixel <= rotate[0]  ? 
+                              back_byte[rotate[1] ? osd_hcnt_next[4:2] : ~osd_hcnt_next[4:2]] :
+                              // no rotation:
+                              back_byte[doublescan ? osd_vcnt[4:2] : osd_vcnt[3:1]];
+    `endif
+    R_out <= !osd_de ? R_in : { {2{osd_pixel}}, {OSD_COLOR[5:4]&back_pixel}, R_in[5:4]};
+    G_out <= !osd_de ? G_in : { {2{osd_pixel}}, {OSD_COLOR[3:2]&back_pixel}, G_in[5:4]};
+    B_out <= !osd_de ? B_in : { {2{osd_pixel}}, {OSD_COLOR[1:0]&back_pixel}, B_in[5:4]};
+    HSync_out <= HSync;
+	VSync_out <= VSync;
 end
 
 `ifndef OSD_NOBCK

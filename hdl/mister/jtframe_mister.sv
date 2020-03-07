@@ -57,7 +57,7 @@ module jtframe_mister #(parameter
     input           SDRAM_CLK,      // SDRAM Clock
     output          SDRAM_CKE,      // SDRAM Clock Enable
     // ROM load
-	 output [22:0]   ioctl_addr,
+    output [22:0]   ioctl_addr,
     output [ 7:0]   ioctl_data,
     output          ioctl_rom_wr,
     input  [21:0]   prog_addr,
@@ -123,18 +123,18 @@ module jtframe_mister #(parameter
     output            hdmi_de,   // = ~(VBlank | HBlank)
     output    [ 1:0]  hdmi_sl,   // scanlines fx   
     // non standard:
-    output          dip_pause,
-    output          dip_flip,     // A change in dip_flip implies a reset
-    output  [ 1:0]  dip_fxlevel,
-	 output  [31:0]  dipsw,
-	 //DB15 
-	 output          JOY_CLK,
-	 output          JOY_LOAD,
-	 input           JOY_DATA,
-	 output          USER_OSD,
+    output            dip_pause,
+    output            dip_flip,     // A change in dip_flip implies a reset
+    output    [ 1:0]  dip_fxlevel,
+    output    [31:0]  dipsw,
+    //DB15 
+    output            JOY_CLK,
+    output            JOY_LOAD,
+    input             JOY_DATA,
+    output            USER_OSD,
     // Debug
-    output          LED,
-    output   [3:0]  gfx_en
+    output            LED,
+    output   [3:0]    gfx_en
 );
 
 assign LED  = downloading | dwnld_busy;
@@ -149,7 +149,7 @@ joy_db15 joy_db15
   .JOY_DATA  ( JOY_DATA  ),
   .JOY_LOAD  ( JOY_LOAD  ),
   .joystick1 ( joydb15_1 ),
-  .joystick2 ( joydb15_2 )	  
+  .joystick2 ( joydb15_2 )    
 );
 
 wire [15:0]   joystick_USB_1, joystick_USB_2, joystick_USB_3, joystick_USB_4;
@@ -199,10 +199,21 @@ wire [21:0] gamma_bus;
 wire [ 7:0] ioctl_index;
 wire        ioctl_wr;
 
-reg  [7:0] dsw[8];
-always @(posedge clk_sys) if (ioctl_wr && (ioctl_index==254) && !ioctl_addr[21:3]) dsw[ioctl_addr[2:0]] <= ioctl_data;
-assign dipsw = {dsw[3],dsw[2],dsw[1],dsw[0]};
-assign ioctl_rom_wr = (ioctl_wr && !ioctl_index);
+`ifndef JTFRAME_MRA_DIP
+// DIP switches through regular OSD options
+assign ioctl_rom_wr = ioctl_wr;
+assign dipsw        = status;
+`else
+// Dip switches through MRA file
+// Support for 32 bits only for now.
+reg  [ 7:0] dsw[4];
+assign dipsw        = {dsw[3],dsw[2],dsw[1],dsw[0]};
+assign ioctl_rom_wr = (ioctl_wr && ioctl_index==8'd0);
+
+always @(posedge clk_sys) begin
+    if (ioctl_wr && (ioctl_index==8'd254) && !ioctl_addr[21:2]) dsw[ioctl_addr[1:0]] <= ioctl_data;
+end
+`endif
 
 hps_io #(.STRLEN($size(CONF_STR)/8),.PS2DIV(32)) u_hps_io
 (
@@ -221,9 +232,9 @@ hps_io #(.STRLEN($size(CONF_STR)/8),.PS2DIV(32)) u_hps_io
     .ioctl_wr        ( ioctl_wr       ),
     .ioctl_addr      ( ioctl_addr     ),
     .ioctl_dout      ( ioctl_data     ),
-	 .ioctl_index     ( ioctl_index    ),
+    .ioctl_index     ( ioctl_index    ),
 
-	 .joy_raw         ( joydb15_1[5:0] ),	
+    .joy_raw         ( joydb15_1[5:0] ),   
     .joystick_0      ( joystick_USB_1 ),
     .joystick_1      ( joystick_USB_2 ),
     .joystick_2      ( joystick_USB_3 ),
