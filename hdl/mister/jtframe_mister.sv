@@ -151,8 +151,8 @@ joy_db9md joy_db9md
 );
 
 wire [15:0]   joystick_USB_1, joystick_USB_2, joystick_USB_3, joystick_USB_4;
-wire [15:0]   joystick1 = |status[31:30] ? {BUTTONS<6 ? joydb15_1[9] : 1'b0,joydb15_1[11] | BUTTONS<5 ? joydb15_1[8] : joydb15_1[10] & joydb15_1[5],joydb15_1[10],joydb15_1[3+BUTTONS:0]} : joystick_USB_1;
-wire [15:0]   joystick2 =  status[31]    ? {BUTTONS<6 ? joydb15_2[9] : 1'b0,joydb15_2[11] | BUTTONS<5 ? joydb15_2[8] : joydb15_2[10] & joydb15_2[5],joydb15_2[10],joydb15_2[3+BUTTONS:0]} : status[30] ? joystick_USB_1 : joystick_USB_2;
+wire [15:0]   joystick1 = |status[31:30] ? {BUTTONS<6 ? joydb9md_1[9] : 1'b0,joydb9md_1[11] | BUTTONS<5 ? joydb9md_1[8] : joydb9md_1[10] & joydb9md_1[5],joydb9md_1[10],joydb9md_1[3+BUTTONS:0]} : joystick_USB_1;
+wire [15:0]   joystick2 =  status[31]    ? {BUTTONS<6 ? joydb9md_2[9] : 1'b0,joydb9md_2[11] | BUTTONS<5 ? joydb9md_2[8] : joydb9md_2[10] & joydb9md_2[5],joydb9md_2[10],joydb9md_2[3+BUTTONS:0]} : status[30] ? joystick_USB_1 : joystick_USB_2;
 wire [15:0]   joystick3 =  status[31]    ? joystick_USB_1 : status[30] ? joystick_USB_2 : joystick_USB_3;
 wire [15:0]   joystick4 =  status[31]    ? joystick_USB_2 : status[30] ? joystick_USB_3 : joystick_USB_4;
 
