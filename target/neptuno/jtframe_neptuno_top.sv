@@ -16,6 +16,16 @@
     Version: 1.0
     Date: 22-2-2019 */
 
+`ifdef MULTICORE2PLUS
+    `define MC2_PINS
+`endif
+
+`ifdef MULTICORE2
+    `define MC2_PINS
+`endif
+
+//`default_nettype none
+
 module neptuno_top(
     input           CLK50,
     output  [5:0]   VGA_R,
@@ -50,19 +60,77 @@ module neptuno_top(
     // PS2
     input           PS2_CLK,
     input           PS2_DATA,
+    inout           PS2_MOUSE_CLK,
+    inout           PS2_MOUSE_DATA
+    
     // Joystick
-    output          JOY_CLK,
+`ifndef MULTICORE2
+    // joy pins for neputo and Multicore 2 plus
+    ,output         JOY_CLK,
     output          JOY_LOAD,
-    input           JOY_DATA,
-    output          JOY_SELECT
+    input           JOY_DATA
+`else
+    //joy pins for Multicore 2
+   ,input [5:0]     JOY1,
+    input [5:0]     JOY2
+`endif
 
-    `ifdef SIMULATION
+    ,output          JOY_SELECT
+
+`ifdef MC2_PINS
+    // only MC2 and MC2+ pins
+    ,input [3:0]     BUTTON_n,
+    
+    // SD Card
+    output wire SD_CS,
+    output wire SD_SCLK,
+    output wire SD_MOSI,
+    input wire  SD_MISO,   
+    
+    // SRAM
+    output wire [20:0]SRAM_ADDR,
+    inout wire  [7:0]SRAM_DATA,
+    output wire SRAM_WE,
+    output wire SRAM_OE 
+`endif
+
+    //STM32
+    ,output wire  STM_RESET,
+    output wire   SPI_nWAIT
+        
+`ifdef MULTICORE2PLUS
+    //Multicore 2 plus exclusive pins
+    ,inout [31:0] GPIO 
+`endif   
+
+`ifdef SIMULATION
     ,output         sim_pxl_cen,
     output          sim_pxl_clk,
     output          sim_vb,
     output          sim_hb
-    `endif
+`endif
 );
+
+//---------------------------------------------------------
+//-- Multicores defaults
+//---------------------------------------------------------
+`ifdef MC2_PINS    
+    //no SRAM for this core
+    assign SRAM_WE  = 1'b1;
+    assign SRAM_OE  = 1'b1;
+
+    //all the SD reading goes thru the microcontroller for this core
+    assign SD_CS   = 1'bZ;
+    assign SD_SCLK = 1'bZ;
+    assign SD_MOSI = 1'bZ;
+    
+    assign STM_RESET = 1'bZ;
+`endif  
+
+`ifdef MULTICORE2PLUS    
+   //disable external interfaces for this core
+    assign GPIO = 32'Hzzzz; 
+`endif  
 
 `ifdef JTFRAME_SDRAM_LARGE
     localparam SDRAMW=23; // 64 MB
@@ -74,12 +142,12 @@ wire          rst, rst_n, clk_sys, clk_rom, clk6, clk24, clk48, clk96;
 wire [63:0]   status;
 wire [31:0]   joystick1, joystick2;
 wire [24:0]   ioctl_addr;
-wire [ 7:0]   ioctl_data;
-wire [ 7:0]   ioctl_data2sd;
+wire [ 7:0]   ioctl_dout;
+wire [ 7:0]   ioctl_din;
 wire          ioctl_wr;
 wire          ioctl_ram;
 
-wire [15:0]   joystick_analog_0, joystick_analog_1;
+wire [15:0]   joyana1, joyana2;
 
 wire rst_req   = status[0];
 
@@ -106,6 +174,10 @@ wire [15:0] sdram_dout;
 `define COLORW 4
 `endif
 
+`ifndef MC2_PINS
+    wire [3:0] BUTTON_n = 4'hf;
+`endif
+
 localparam COLORW=`COLORW;
 
 wire [COLORW-1:0] red;
@@ -128,6 +200,37 @@ wire pll_locked, clk_pico;
 `ifndef STEREO_GAME
 assign snd_right = snd_left;
 `endif
+
+//joysticks
+wire [5:0] joy1_bus;
+wire [5:0] joy2_bus;
+
+`ifndef MULTICORE2
+    joystick_serial u_serial(
+        .clk_i           ( clk_sys     ),
+        .joy_data_i      ( JOY_DATA    ),
+        .joy_clk_o       ( JOY_CLK     ),
+        .joy_load_o      ( JOY_LOAD    ),
+
+        .joy1_up_o       ( joy1_bus[3] ),
+        .joy1_down_o     ( joy1_bus[2] ),
+        .joy1_left_o     ( joy1_bus[1] ),
+        .joy1_right_o    ( joy1_bus[0] ),
+        .joy1_fire1_o    ( joy1_bus[4] ),
+        .joy1_fire2_o    ( joy1_bus[5] ),
+
+        .joy2_up_o       ( joy2_bus[3] ),
+        .joy2_down_o     ( joy2_bus[2] ),
+        .joy2_left_o     ( joy2_bus[1] ),
+        .joy2_right_o    ( joy2_bus[0] ),
+        .joy2_fire1_o    ( joy2_bus[4] ),
+        .joy2_fire2_o    ( joy2_bus[5] )
+    );
+`else
+    assign joy1_bus = JOY1;
+    assign joy2_bus = JOY2;
+`endif
+
 
 jtframe_mist_clocks u_clocks(
     .clk_ext    ( CLK50          ),    // 27MHz for MiST, 50MHz for Neptuno
@@ -187,10 +290,10 @@ jtframe_mist #(
     .DIPBASE      ( DIPBASE        ),
     .COLORW       ( COLORW         )
     `ifdef VIDEO_WIDTH
-    ,.VIDEO_WIDTH   ( `VIDEO_WIDTH   )
+    ,.VIDEO_WIDTH ( `VIDEO_WIDTH   )
     `endif
     `ifdef VIDEO_HEIGHT
-    ,.VIDEO_HEIGHT  ( `VIDEO_HEIGHT  )
+    ,.VIDEO_HEIGHT( `VIDEO_HEIGHT  )
     `endif
 )
 u_frame(
@@ -234,13 +337,15 @@ u_frame(
     .SPI_SCK        ( SPI_SCK        ),
     .SPI_SS2        ( SPI_SS2        ),
 
-    .JOY_CLK        ( JOY_CLK        ),
-    .JOY_LOAD       ( JOY_LOAD       ),
-    .JOY_DATA       ( JOY_DATA       ),
+    .joy1_bus       ( joy1_bus       ),
+    .joy2_bus       ( joy2_bus       ),
+
     .JOY_SELECT     ( JOY_SELECT     ),
 
     .ps2_clk        ( PS2_CLK        ),
     .ps2_dout       ( PS2_DATA       ),
+    
+    .BUTTON_n       ( BUTTON_n       ),
 
     // ROM access from game
     // Bank 0: allows R/W
@@ -271,8 +376,8 @@ u_frame(
 
     // ROM load
     .ioctl_addr     ( ioctl_addr     ),
-    .ioctl_data     ( ioctl_data     ),
-    .ioctl_data2sd  ( ioctl_data2sd  ),
+    .ioctl_dout     ( ioctl_dout     ),
+    .ioctl_din      ( ioctl_din      ),
     .ioctl_wr       ( ioctl_wr       ),
     .ioctl_ram      ( ioctl_ram      ),
 
@@ -300,8 +405,8 @@ u_frame(
     .game_coin      ( game_coin      ),
     .game_start     ( game_start     ),
     .game_service   ( game_service   ),
-    .joystick_analog_0( joystick_analog_0 ),
-    .joystick_analog_1( joystick_analog_1 ),
+    .joyana1        ( joyana1        ),
+    .joyana2        ( joyana2        ),
     .LED            ( LED            ),
     // DIP and OSD settings
     .enable_fm      ( enable_fm      ),
@@ -390,25 +495,27 @@ u_game(
     .coin_input  ( game_coin[STARTW-1:0]       ),
     .joystick1   ( game_joy1[BUTTONS+3:0]      ),
     .joystick2   ( game_joy2[BUTTONS+3:0]      ),
-    `ifdef JTFRAME_4PLAYERS
+`ifdef JTFRAME_4PLAYERS
     .joystick3   ( game_joy3[BUTTONS+3:0]      ),
     .joystick4   ( game_joy4[BUTTONS+3:0]      ),
-    `endif
-    `ifdef JTFRAME_ANALOG
-    .joyana1     ( joystick_analog_0   ),
-    .joyana2     ( joystick_analog_1   ),
-    `endif
+`endif
+`ifdef JTFRAME_ANALOG
+    .joyana1     ( joyana1        ),
+    .joyana2     ( joyana2        ),
+    .joyana3     ( 16'h0          ),
+    .joyana4     ( 16'h0          ),
+`endif
 
     // Sound control
     .enable_fm   ( enable_fm      ),
     .enable_psg  ( enable_psg     ),
     // PROM programming
     .ioctl_addr  ( ioctl_addr     ),
-    .ioctl_data  ( ioctl_data     ),
+    .ioctl_dout  ( ioctl_dout     ),
     .ioctl_wr    ( ioctl_wr       ),
-`ifdef CORE_NVRAM_SIZE
+`ifdef JTFRAME_IOCTL_RD
     .ioctl_ram   ( ioctl_ram      ),
-    .ioctl_data2sd(ioctl_data2sd  ),
+    .ioctl_din   ( ioctl_din      ),
 `endif
     // ROM load
     .downloading ( downloading    ),
