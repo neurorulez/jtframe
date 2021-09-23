@@ -32,6 +32,7 @@ TARGET=mist
 SKIP_COMPILE=FALSE
 RENAME=
 FAIL=0
+EXT=rbf
 
 # Verilog macros
 MACROS=
@@ -67,6 +68,9 @@ function parse_args {
             -rename)
                 shift
                 RENAME=$1;;
+            -seed)
+                shift
+                SEED=$1;;
             -help | -h)
                 show_usage;;
             *)  if [ -z "$PRJ" ]; then
@@ -153,7 +157,7 @@ else
 fi
 shift
 
-OUTPUTDIR=output_${SEED}
+OUTPUTDIR=output_files
 
 # Check Quartus path
 case $TARGET in
@@ -378,15 +382,28 @@ function append_if_exists {
 }
 
 ################# Store output file
+# Determine file extension
+case $TARGET in
+    neptuno) EXT=np1;;
+    mc2) EXT=mc2;;
+    mcp) EXT=mcp;;
+    *) EXT=rbf;;
+esac
+
 # Rename output file
 cd $JTROOT
-mkdir -p releases
+mkdir -p releases/$TARGET
 if [ -z $RENAME ]; then
     SHORT=jt${PRJ}
 else
     SHORT=jt$RENAME
 fi
-RELEASE=${SHORT}_$CORESTAMP
+
+# date stamp is only added to MiSTer output
+RELEASE=${SHORT}
+if [ $TARGET = mister ]; then
+    RELEASE=${RELEASE}_$CORESTAMP
+fi
 
 if [ $SEED != 1 ]; then
     SEED_SUFFIX=_$SEED
@@ -400,7 +417,7 @@ if [ ! -e $RBF ]; then
     echo -e "${rBG}ERROR:${NC}${wBG} file ${red}$RBF${NC}${wBG} does not exist. You need to recompile.${NC}"
     exit 1
 fi
-cp $RBF $RELEASE.rbf
+cp $RBF releases/$TARGET/$RELEASE.$EXT
 
 END_TIME=$(date +%s)
 

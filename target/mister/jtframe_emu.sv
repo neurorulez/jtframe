@@ -162,8 +162,10 @@ wire [3:0] hoffset, voffset;
 ////////////////////   CLOCKS   ///////////////////
 
 wire clk_sys, clk_rom, clk96, clk96sh, clk48, clk48sh, clk24, clk6;
+wire game_rst, game_service, rst, rst_n;
 wire clk_pico;
 wire pxl2_cen, pxl_cen;
+wire rst96, rst48, rst24, rst6;
 wire pll_locked;
 reg  pll_rst = 1'b0;
 
@@ -203,6 +205,30 @@ end
     .outclk_3   ( clk6       ),
     .outclk_4   ( clk96      ),
     .outclk_5   ( clk96sh    )
+);
+
+jtframe_rst_sync u_reset96(
+    .rst        ( game_rst  ),
+    .clk        ( clk96     ),
+    .rst_sync   ( rst96     )
+);
+
+jtframe_rst_sync u_reset48(
+    .rst        ( game_rst  ),
+    .clk        ( clk48     ),
+    .rst_sync   ( rst48     )
+);
+
+jtframe_rst_sync u_reset24(
+    .rst        ( game_rst  ),
+    .clk        ( clk24     ),
+    .rst_sync   ( rst24     )
+);
+
+jtframe_rst_sync u_reset6(
+    .rst        ( game_rst ),
+    .clk        ( clk6     ),
+    .rst_sync   ( rst6     )
 );
 
 `ifdef JTFRAME_SDRAM96
@@ -264,15 +290,14 @@ wire [31:0] dipsw;
 
 wire        ioctl_wr;
 wire [26:0] ioctl_addr; // up to 128MB
-wire [ 7:0] ioctl_data;
+wire [ 7:0] ioctl_dout, ioctl_din;
 
 wire [ 9:0] game_joy1, game_joy2, game_joy3, game_joy4;
 wire [ 3:0] game_coin, game_start;
 wire [ 3:0] gfx_en;
 wire [ 7:0] debug_bus;
-wire [15:0] joystick_analog_0, joystick_analog_1;
+wire [15:0] joyana1, joyana2, joyana3, joyana4;
 
-wire        game_rst, game_service, rst, rst_n;
 wire        rst_req   = RESET | status[0] | buttons[1];
 
 assign LED_DISK  = 2'b0;
@@ -324,7 +349,6 @@ localparam GAME_BUTTONS=`BUTTONS;
 wire [COLORW-1:0] game_r, game_g, game_b;
 wire              LHBL, LVBL;
 wire              hs, vs, sample;
-wire [       7:0] ioctl_data2sd;
 wire              ioctl_ram;
 
 assign game_led[1] = 1'b1;
@@ -450,10 +474,10 @@ u_frame(
 
     // ROM load
     .ioctl_addr     ( ioctl_addr     ),
-    .ioctl_dout     ( ioctl_data     ),
+    .ioctl_dout     ( ioctl_dout     ),
     .ioctl_rom_wr   ( ioctl_wr       ),
     .ioctl_ram      ( ioctl_ram      ),
-    .ioctl_din      ( ioctl_data2sd  ),
+    .ioctl_din      ( ioctl_din      ),
 
     .downloading    ( downloading    ),
     .dwnld_busy     ( dwnld_busy     ),
@@ -472,8 +496,10 @@ u_frame(
     .game_coin      ( game_coin      ),
     .game_start     ( game_start     ),
     .game_service   ( game_service   ),
-    .joystick_analog_0( joystick_analog_0 ),
-    .joystick_analog_1( joystick_analog_1 ),
+    .joyana1        ( joyana1        ),
+    .joyana2        ( joyana2        ),
+    .joyana3        ( joyana3        ),
+    .joyana4        ( joyana4        ),
     .LED            ( LED_USER       ),
     // DIP and OSD settings
     .enable_fm      ( enable_fm      ),
@@ -544,15 +570,19 @@ end
     .clk          ( clk_rom          ),
 `ifdef JTFRAME_CLK96
     .clk96        ( clk96            ),
+    .rst96        ( rst96            ),
 `endif
 `ifdef JTFRAME_CLK48
     .clk48        ( clk48            ),
+    .rst48        ( rst48            ),
 `endif
 `ifdef JTFRAME_CLK24
     .clk24        ( clk24            ),
+    .rst24        ( rst24            ),
 `endif
 `ifdef JTFRAME_CLK6
     .clk6         ( clk6             ),
+    .rst6         ( rst6             ),
 `endif
     .pxl2_cen     ( pxl2_cen         ),
     .pxl_cen      ( pxl_cen          ),
@@ -579,19 +609,21 @@ end
     .joystick4    ( game_joy4[GAME_BUTTONS+3:0]   ),
     `endif
     `ifdef JTFRAME_ANALOG
-    .joyana1      ( joystick_analog_0   ),
-    .joyana2      ( joystick_analog_1   ),
+    .joyana1        ( joyana1        ),
+    .joyana2        ( joyana2        ),
+    .joyana3        ( joyana3        ),
+    .joyana4        ( joyana4        ),
     `endif
     // Sound control
     .enable_fm    ( enable_fm        ),
     .enable_psg   ( enable_psg       ),
     // PROM programming
     .ioctl_addr   ( ioctl_addr       ),
-    .ioctl_data   ( ioctl_data       ),
+    .ioctl_dout   ( ioctl_dout       ),
     .ioctl_wr     ( ioctl_wr         ),
-`ifdef CORE_NVRAM_SIZE
+`ifdef JTFRAME_IOCTL_RD
     .ioctl_ram    ( ioctl_ram        ),
-    .ioctl_data2sd(ioctl_data2sd     ),
+    .ioctl_din    ( ioctl_din        ),
 `endif
 
     // ROM load

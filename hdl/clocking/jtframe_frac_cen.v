@@ -21,37 +21,36 @@
 // W refers to the number of divided down cen signals available
 // each one is divided by 2
 
-module jtframe_frac_cen #(parameter W=2)(
+module jtframe_frac_cen #(parameter W=2,WC=10)(
     input         clk,
-    input   [9:0] n,         // numerator
-    input   [9:0] m,         // denominator
+    input   [WC-1:0] n,         // numerator
+    input   [WC-1:0] m,         // denominator
     output reg [W-1:0] cen,
     output reg [W-1:0] cenb // 180 shifted
 );
 
-wire [10:0] step={1'b0,n};
-wire [10:0] lim ={1'b0,m};
-wire [10:0] absmax = lim+step;
+wire [WC:0] step={1'b0,n},
+            lim ={1'b0,m},
+            absmax = lim+step;
 
-reg  [10:0] cencnt=0;
-reg  [10:0] next;
-reg  [10:0] next2;
+reg  [WC:0] cencnt=0,
+            next, next2;
 
 always @(*) begin
     next  = cencnt+step;
     next2 = next-lim;
 end
 
-reg  half    = 1'b0;
+reg  half    = 0;
 wire over    = next>=lim;
 wire halfway = next >= (lim>>1)  && !half;
 
 reg  [W-1:0] edgecnt = 0;
-wire [W-1:0] next_edgecnt = edgecnt + 1;
+wire [W-1:0] next_edgecnt = edgecnt + 1'd1;
 wire [W-1:0] toggle = next_edgecnt & ~edgecnt;
 
 reg  [W-1:0] edgecnt_b = 0;
-wire [W-1:0] next_edgecnt_b = edgecnt_b + 1;
+wire [W-1:0] next_edgecnt_b = edgecnt_b + 1'd1;
 wire [W-1:0] toggle_b = next_edgecnt_b & ~edgecnt_b;
 
 always @(posedge clk) begin
@@ -60,7 +59,7 @@ always @(posedge clk) begin
 
     if( cencnt >= absmax ) begin
         // something went wrong: restart
-        cencnt <= 11'd0;
+        cencnt <= 0;
     end else
     if( halfway ) begin
         half <= 1'b1;
