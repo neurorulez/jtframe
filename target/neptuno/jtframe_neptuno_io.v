@@ -15,6 +15,14 @@
     Author: Jose Tejada Gomez. Twitter: @topapate
     Version: 1.0
     Date: 12-6-2021 */
+    
+`ifdef MULTICORE2PLUS
+    `define MC2_PINS
+`endif
+
+`ifdef MULTICORE2
+    `define MC2_PINS
+`endif
 
 module jtframe_neptuno_io(
     input          sdram_init,
@@ -42,13 +50,20 @@ module jtframe_neptuno_io(
     output         scan2x_enb,
 
     // DB9 Joysticks
-    output         JOY_CLK,
-    output         JOY_LOAD,
-    input          JOY_DATA,
+    input    [5:0] joy1_bus,
+    input    [5:0] joy2_bus,
     output         JOY_SELECT,
+    
+    // keyboard
+    input          ps2_kbd_clk,
+    input          ps2_kbd_data,
 
     output  [11:0] joystick1,
-    output  [11:0] joystick2
+    output  [11:0] joystick2,
+    output  [ 8:0] controls,
+    
+    // Buttons for MC2(+)
+    input   [ 3:0] BUTTON_n
 );
 
 reg [7:0] nept_din=8'hff;
@@ -65,8 +80,14 @@ localparam [2:0] NEPT_CMD_NOP = 3'b111,
 
 reg [4:0] nept_key;
 reg [2:0] nept_cmd;
+reg       scandb_s = 0;
 
 wire [11:0] joy_mix = joystick1[11:0] | joystick2[11:0];
+wire [ 7:0] osd_s;
+wire [31:0] status_s;
+
+wire        mc_reset;
+
 
 // wire scan2x_toggle = joy_mix[10] & joy_mix[7]; // Start + B buttons
 wire osd_en = joy_mix[10] & joy_mix[6]; // Start + C buttons of Megadrive controller
@@ -105,8 +126,14 @@ always @(posedge clk_sys) begin
         if ( cntdown!=0 ) begin
             cntdown <= cntdown-1;
             nept_din <= 8'hff;
-        end else
+        end else begin
+
+`ifdef MC2_PINS
+            nept_din <= dwn_done ? osd_s : 8'h3f; 
+`else
             nept_din <= dwn_done ? { nept_cmd ,nept_key } : 8'h3f;
+`endif              
+        end
     end
 end
 
@@ -119,7 +146,7 @@ data_io  u_datain (
     .data_in            ( nept_din          ),
     .conf_addr          ( cfg_addr          ),
     .conf_chr           ( cfg_dout          ),
-    .status             ( status[31:0]      ),
+    .status             ( status_s          ),
     .core_mod           ( core_mod          ),
 
     .clk_rom            ( clk_rom           ),
@@ -132,20 +159,33 @@ data_io  u_datain (
     .config_buffer_o    (                   )
 );
 
-assign status[63:32]=0;
-assign scan2x_enb = 0; // scan doubler enabled
+assign status[31:0]  = { status_s[31:1], status_s[0] | mc_reset }; 
+assign status[63:32] = 0;
+assign scan2x_enb = scandb_s ^ toggle_scandb; // scan doubler enabled
+
 jtframe_neptuno_joy u_joysticks(
-    .clk        ( clk_sys       ),
-    .hs         ( hs            ),
+    .clk          ( clk_sys       ),
+    .reset        ( sdram_init    ),
 
-    .joy_clk    ( JOY_CLK       ),
-    .joy_data   ( JOY_DATA      ),
-    .joy_load   ( JOY_LOAD      ),
-    .joy_select ( JOY_SELECT    ),
-
-    .joy1       ( joystick1[11:0] ),
-    .joy2       ( joystick2[11:0] )
+    .joy1_bus     ( joy1_bus      ),
+    .joy2_bus     ( joy2_bus      ),
+    .joy_select   ( JOY_SELECT    ),
+    
+    .ps2_kbd_clk  ( ps2_kbd_clk   ),
+    .ps2_kbd_data ( ps2_kbd_data  ),
+    .BUTTON_n     ( BUTTON_n      ),
+    
+    .joy1         ( joystick1[11:0] ),
+    .joy2         ( joystick2[11:0] ),
+    .controls     ( controls      ),
+  
+    .osd          ( osd_s         ),
+    .mc_reset     ( mc_reset      ),
+    .toggle_scandb( toggle_scandb )
 );
+
+
+
 
 
 endmodule

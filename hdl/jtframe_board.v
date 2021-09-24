@@ -90,6 +90,8 @@ module jtframe_board #(parameter
     input     [15:0]  board_joystick2,
     input     [15:0]  board_joystick3,
     input     [15:0]  board_joystick4,
+    input      [3:0]  board_start,
+    input      [3:0]  board_coin,
     output     [9:0]  game_joystick1,
     output     [9:0]  game_joystick2,
     output     [9:0]  game_joystick3,
@@ -129,7 +131,7 @@ module jtframe_board #(parameter
     // ROM downloading (cheat engine)
     input             cheat_prog,
     input             ioctl_wr,
-    input       [7:0] ioctl_data,
+    input       [7:0] ioctl_dout,
     input       [7:0] ioctl_addr,
 
     // scan doubler
@@ -216,7 +218,7 @@ wire         osd_pause;
 wire         debug_plus, debug_minus, key_shift;
 
 wire         key_reset, key_pause, key_test, rot_control;
-wire         game_pause, soft_rst;
+wire         game_pause, soft_rst, game_test;
 wire         cheat_led, pre_pause;
 
 wire   [9:0] key_joy1, key_joy2, key_joy3;
@@ -326,6 +328,8 @@ jtframe_inputs #(
     .board_joy2     ( board_joystick2 ),
     .board_joy3     ( board_joystick3 ),
     .board_joy4     ( board_joystick4 ),
+    .board_start    ( board_start     ),
+    .board_coin     ( board_coin      ),
 
     .key_joy1       ( key_joy1        ),
     .key_joy2       ( key_joy2        ),
@@ -334,6 +338,7 @@ jtframe_inputs #(
     .key_coin       ( key_coin        ),
     .key_service    ( key_service     ),
     .key_pause      ( key_pause       ),
+    .key_test       ( key_test        ),
     .osd_pause      ( osd_pause       ),
     .key_reset      ( key_reset       ),
     .rot_control    ( rot_control     ),
@@ -345,6 +350,7 @@ jtframe_inputs #(
     .game_coin      ( game_coin       ),
     .game_start     ( game_start      ),
     .game_service   ( game_service    ),
+    .game_test      ( game_test       ),
     .lock           ( lock            ),
 
     // Simulation helpers
@@ -368,7 +374,7 @@ jtframe_dip u_dip(
     .enable_fm  ( enable_fm     ),
     .enable_psg ( enable_psg    ),
     .osd_pause  ( osd_pause     ),
-    .key_test   ( key_test      ),
+    .game_test  ( game_test     ),
     .dip_test   ( dip_test      ),
     .dip_pause  ( pre_pause     ),
     .dip_flip   ( dip_flip      ),
@@ -444,7 +450,7 @@ wire [SDRAMW-1:0] bax_addr;
         .prog_en    ( cheat_prog),
         .prog_addr  ( ioctl_addr[7:0] ),
         .prog_wr    ( ioctl_wr  ),
-        .prog_data  ( ioctl_data)
+        .prog_data  ( ioctl_dout)
     );
     assign bax_rd = { ba_rd[3:1], cheat_rd };
     assign bax_wr = { ba_wr[3:1], cheat_wr };

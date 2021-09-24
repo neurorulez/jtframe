@@ -137,8 +137,10 @@ module jtframe_mister #(parameter
     output  [ 9:0]  game_joystick2,
     output  [ 9:0]  game_joystick3,
     output  [ 9:0]  game_joystick4,
-    output  [15:0]  joystick_analog_0,
-    output  [15:0]  joystick_analog_1,
+    output  [15:0]  joyana1,
+    output  [15:0]  joyana2,
+    output  [15:0]  joyana3,
+    output  [15:0]  joyana4,
     output  [ 3:0]  game_coin,
     output  [ 3:0]  game_start,
     output          game_service,
@@ -227,6 +229,12 @@ wire [ 6:0] core_mod;
 
 wire        hs_resync, vs_resync;
 
+// Horizontal scaling for CRT
+wire        hsize_enable;
+wire [3:0]  hsize_scale;
+wire        hsize_hs, hsize_vs, hsize_hb, hsize_vb;
+wire [COLORW-1:0] hsize_r, hsize_g, hsize_b;
+
 wire        hps_download, hps_wr, hps_wait;
 wire [15:0] hps_index;
 wire [26:0] hps_addr;
@@ -245,6 +253,8 @@ wire [28:0] ddrld_addr;
 wire        ddrld_rd, ddrld_busy;
 
 assign { voffset, hoffset } = status[31:24];
+assign hsize_enable = status[19];
+assign hsize_scale  = status[23:20];
 
 `ifdef JTFRAME_VERTICAL
 assign {FB_PAL_CLK, FB_FORCE_BLANK, FB_PAL_ADDR, FB_PAL_DOUT, FB_PAL_WR} = '0;
@@ -265,7 +275,8 @@ jtframe_resync u_resync(
 
 wire [15:0] status_menumask;
 
-assign status_menumask[15:2] = 0,
+assign status_menumask[15:3] = 0,
+       status_menumask[2]    = ~hsize_enable,
        status_menumask[1]    = ~core_mod[0],
        status_menumask[0]    = direct_video;
 
@@ -374,8 +385,10 @@ hps_io #( .STRLEN(0), .PS2DIV(32), .WIDE(JTFRAME_MR_FASTIO) ) u_hps_io
     .joystick_1      ( joystick2_USB  ),
     .joystick_2      ( joystick3_USB  ),
     .joystick_3      ( joystick4_USB  ),
-    .joystick_analog_0( joystick_analog_0   ),
-    .joystick_analog_1( joystick_analog_1   ),
+    .joystick_analog_0( joyana1       ),
+    .joystick_analog_1( joyana2       ),
+    .joystick_analog_2( joyana3       ),
+    .joystick_analog_3( joyana4       ),
     .ps2_kbd_clk_out ( ps2_kbd_clk    ),
     .ps2_kbd_data_out( ps2_kbd_data   ),
     // Unused:
@@ -386,6 +399,43 @@ hps_io #( .STRLEN(0), .PS2DIV(32), .WIDE(JTFRAME_MR_FASTIO) ) u_hps_io
     .ps2_mouse_ext   (                ),
     .ioctl_file_ext  (                )
 );
+
+`ifndef DEBUG_NOHDMI
+    // scales base video horizontally
+    jtframe_hsize #(.COLORW(COLORW)) u_hsize(
+        .clk        ( clk_sys   ),
+        .pxl_cen    ( pxl_cen   ),
+        .pxl2_cen   ( pxl2_cen  ),
+
+        .scale      ( hsize_scale  ),
+        .offset     ( 5'd0         ),
+        .enable     ( hsize_enable ),
+
+        .r_in       ( game_r    ),
+        .g_in       ( game_g    ),
+        .b_in       ( game_b    ),
+        .HS_in      ( hs_resync ),
+        .VS_in      ( vs_resync ),
+        .HB_in      ( ~LHBL     ),
+        .VB_in      ( ~LVBL     ),
+        // filtered video
+        .HS_out     ( hsize_hs  ),
+        .VS_out     ( hsize_vs  ),
+        .HB_out     ( hsize_hb  ),
+        .VB_out     ( hsize_vb  ),
+        .r_out      ( hsize_r   ),
+        .g_out      ( hsize_g   ),
+        .b_out      ( hsize_b   )
+    );
+`else
+    assign hsize_hs = hs_resync;
+    assign hsize_vs = vs_resync;
+    assign hsize_hb = ~LHBL;
+    assign hsize_vb = ~LVBL;
+    assign hsize_r  = game_r;
+    assign hsize_g  = game_g;
+    assign hsize_b  = game_b;
+`endif
 
 jtframe_board #(
     .BUTTONS               ( BUTTONS              ),
@@ -416,6 +466,8 @@ jtframe_board #(
     .board_joystick2( joystick2       ),
     .board_joystick3( joystick3       ),
     .board_joystick4( joystick4       ),
+    .board_start    ( 4'd0            ),
+    .board_coin     ( 4'd0            ),
     .game_joystick1 ( game_joystick1  ),
     .game_joystick2 ( game_joystick2  ),
     .game_joystick3 ( game_joystick3  ),
@@ -499,19 +551,19 @@ jtframe_board #(
     .cheat          ( cheat           ),
     .cheat_prog     ( ioctl_cheat     ),
     .ioctl_wr       ( hps_wr          ),
-    .ioctl_data     ( ioctl_dout      ),
+    .ioctl_dout     ( ioctl_dout      ),
     .ioctl_addr     ( ioctl_addr[7:0] ),
     .st_addr        ( st_addr         ),
     .st_dout        ( st_dout         ),
     // Base video
     .osd_rotate     ( rotate          ),
-    .game_r         ( game_r          ),
-    .game_g         ( game_g          ),
-    .game_b         ( game_b          ),
-    .LHBL           ( LHBL            ),
-    .LVBL           ( LVBL            ),
-    .hs             ( hs_resync       ),
-    .vs             ( vs_resync       ),
+    .game_r         ( hsize_r         ),
+    .game_g         ( hsize_g         ),
+    .game_b         ( hsize_b         ),
+    .LHBL           ( ~hsize_hb       ),
+    .LVBL           ( ~hsize_vb       ),
+    .hs             ( hsize_hs        ),
+    .vs             ( hsize_vs        ),
     .pxl_cen        ( pxl_cen         ),
     .pxl2_cen       ( pxl2_cen        ),
     // Debug

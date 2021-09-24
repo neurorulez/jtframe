@@ -31,7 +31,7 @@ module jtframe_dwnld(
     input                clk,
     input                downloading,
     input      [24:0]    ioctl_addr,
-    input      [ 7:0]    ioctl_data,
+    input      [ 7:0]    ioctl_dout,
     input                ioctl_wr,
     output reg [21:0]    prog_addr,
     output     [15:0]    prog_data,
@@ -73,17 +73,17 @@ assign prog_rd   = 0;
 `undef JTFRAME_DWNLD_PROM_ONLY
 `endif
 
+always @(*) begin
+    header    = HEADER!=0 && ioctl_addr < HEADER && downloading;
+    part_addr = ioctl_addr-HEADER;
+end
+
 `ifndef JTFRAME_DWNLD_PROM_ONLY
 /////////////////////////////////////////////////
 // Normal operation
 reg  [ 1:0] bank;
 reg  [24:0] offset;
 reg  [24:0] eff_addr;
-
-always @(*) begin
-    header    = HEADER!=0 && ioctl_addr < HEADER;
-    part_addr = ioctl_addr-HEADER;
-end
 
 always @(*) begin
     bank = !BA_EN ? 2'd0 : (
@@ -113,7 +113,7 @@ always @(posedge clk) begin
             prog_ba   <= bank;
             `endif
         end
-        data_out  <= ioctl_data;
+        data_out  <= ioctl_dout;
         prog_mask <= (eff_addr[0]^SWAB[0]) ? 2'b10 : 2'b01;
     end
     else begin
@@ -125,6 +125,7 @@ end
 `else
 ////////////////////////////////////////////////////////
 // Load only PROMs directly from file in simulation
+/* verilator lint_off WIDTH */
 
 parameter [31:0] GAME_ROM_LEN = `GAME_ROM_LEN;
 
@@ -132,7 +133,7 @@ integer          f, readcnt, dumpcnt;
 reg       [ 7:0] mem[0:`GAME_ROM_LEN];
 
 initial begin
-    dumpcnt = PROM_START;
+    dumpcnt = PROM_START+HEADER;
     if( SIMFILE != "" && PROM_EN ) begin
         f=$fopen(SIMFILE,"rb");
         if( f != 0 ) begin
@@ -154,19 +155,27 @@ initial begin
     end
 end
 
+// The PROM starts downloading at the same time that
+// the test_harness sends the first 32 bytes of ROM
+// the data from the harness is ignored here, but
+// the header output is set to 1 if HEADER is defined,
+// so these data can be read externally if checked for ioctrl_wr/ioctrl_data
+reg start_ok=0;
+
 always @(posedge clk) begin
-    if( dumpcnt < GAME_ROM_LEN ) begin
+    if( downloading ) start_ok<=1;
+    if( dumpcnt < GAME_ROM_LEN && start_ok ) begin
         prom_we   <= 1;
         prog_we   <= 0;
         prog_mask <= 2'b11;
         data_out  <= mem[dumpcnt];
-        prog_addr <= dumpcnt[21:0];
+        prog_addr <= dumpcnt[21:0]-HEADER;
         dumpcnt   <= dumpcnt+1;
     end else begin
         prom_we <= 0;
     end
 end
-
+/* verilator lint_on WIDTH */
 `endif
 
 endmodule

@@ -66,6 +66,8 @@ module jtframe_mist_base #(parameter
     output [31:0]   joystick4,
     output [15:0]   joystick_analog_0,
     output [15:0]   joystick_analog_1,
+    output [ 3:0]   but_coin,   // buttons, active high
+    output [ 3:0]   but_start,
     // PS2 pins are outputs if NEPTUNO isn't defined
     inout           ps2_kbd_clk,
     inout           ps2_kbd_data,
@@ -76,14 +78,17 @@ module jtframe_mist_base #(parameter
     output          snd_pwm_left,
     output          snd_pwm_right,
     // Direct joystick connection (Neptuno / MC)
-    output          JOY_CLK,
-    output          JOY_LOAD,
-    input           JOY_DATA,
+    input   [5:0]   joy1_bus,
+    input   [5:0]   joy2_bus,
     output          JOY_SELECT,
+    
+   // Buttons for MC2(+)
+    input    [ 3:0] BUTTON_n,
+        
     // ROM load from SPI
     output [24:0]   ioctl_addr,
-    output [ 7:0]   ioctl_data,
-    input  [ 7:0]   ioctl_data2sd,
+    output [ 7:0]   ioctl_dout,
+    input  [ 7:0]   ioctl_din,
     output          ioctl_wr,
     output          ioctl_ram,
     output          ioctl_cheat,
@@ -170,6 +175,10 @@ jtframe_ram #(.synfile("cfgstr.hex")) u_cfgstr(
 );
 
 `ifndef NEPTUNO
+    wire [1:0]  buttons;
+    assign but_coin    = { 3'b0, buttons[0] };
+    assign but_start   = { 3'b0, buttons[1] };
+
     user_io #(.ROM_DIRECT_UPLOAD(`JTFRAME_MIST_DIRECT)) u_userio(
         .rst            ( rst       ),
         .clk_sys        ( clk_sys   ),
@@ -187,6 +196,7 @@ jtframe_ram #(.synfile("cfgstr.hex")) u_cfgstr(
         .joystick_1     ( joystick1 ),
         .joystick_3     ( joystick3 ),
         .joystick_4     ( joystick4 ),
+        .buttons        ( buttons   ),
         // Analog joysticks
         .joystick_analog_0  ( joystick_analog_0 ),
         .joystick_analog_1  ( joystick_analog_1 ),
@@ -240,8 +250,8 @@ assign ypbpr = 1'b0;
         .clkref_n           ( 1'b0              ), // this is not a clock.
         .ioctl_download     ( ioctl_download    ),
         .ioctl_addr         ( ioctl_addr        ),
-        .ioctl_dout         ( ioctl_data        ),
-        .ioctl_din          ( ioctl_data2sd     ),
+        .ioctl_dout         ( ioctl_dout        ),
+        .ioctl_din          ( ioctl_din         ),
         .ioctl_wr           ( ioctl_wr          ),
         .ioctl_index        ( ioctl_index       ),
         // Unused:
@@ -251,6 +261,10 @@ assign ypbpr = 1'b0;
     );
 `else
     // Neptuno
+    wire [8:0]  nept_controls;
+    assign but_coin    = nept_controls[7:4];
+    assign but_start   = nept_controls[3:0];
+
     jtframe_neptuno_io u_neptuno_io(
         .sdram_init     ( sdram_init    ),
         .clk_sys        ( clk_sys       ),
@@ -270,20 +284,26 @@ assign ypbpr = 1'b0;
         .ioctl_index    ( ioctl_index   ),
         .ioctl_wr       ( ioctl_wr      ),
         .ioctl_addr     ( ioctl_addr    ),
-        .ioctl_dout     ( ioctl_data    ),
+        .ioctl_dout     ( ioctl_dout    ),
 
         .core_mod       ( core_mod      ),
         .status         ( status        ),
         .scan2x_enb     ( scan2x_enb    ),
 
         // DB9 Joysticks
-        .JOY_CLK        ( JOY_CLK       ),
-        .JOY_LOAD       ( JOY_LOAD      ),
-        .JOY_DATA       ( JOY_DATA      ),
+        .joy1_bus       ( joy1_bus      ),
+        .joy2_bus       ( joy2_bus      ),
         .JOY_SELECT     ( JOY_SELECT    ),
+        
+        .BUTTON_n       ( BUTTON_n      ),
+        
+        // keyboard
+        .ps2_kbd_clk    ( ps2_kbd_clk   ),
+        .ps2_kbd_data   ( ps2_kbd_data  ),
 
         .joystick1      (joystick1[11:0]),
-        .joystick2      (joystick2[11:0])
+        .joystick2      (joystick2[11:0]),
+        .controls       ( nept_controls )
     );
 
     assign joystick1[31:12]=0;

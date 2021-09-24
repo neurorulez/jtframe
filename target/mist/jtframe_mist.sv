@@ -94,22 +94,21 @@ module jtframe_mist #(parameter
     input           SPI_SS3,
     input           SPI_SS4,
     input           CONF_DATA0,
+    // Buttons for MC2(+)
+    input    [ 3:0] BUTTON_n,
     // PS2 are input pins for Neptuno
     // and outputs for MiST
     inout           ps2_clk,
     inout           ps2_dout,
-`ifdef NEPTUNO
     // Joystick
-    output          JOY_CLK,
-    output          JOY_LOAD,
-    input           JOY_DATA,
+    input     [5:0] joy1_bus,
+    input     [5:0] joy2_bus,
     output          JOY_SELECT,
-`endif
     // ROM load from SPI
     output   [24:0] ioctl_addr,
-    output   [ 7:0] ioctl_data,
+    output   [ 7:0] ioctl_dout,
     output          ioctl_wr,
-    input    [ 7:0] ioctl_data2sd,
+    input    [ 7:0] ioctl_din,
     output          ioctl_ram,
     input           dwnld_busy,
     output          downloading,
@@ -134,8 +133,8 @@ module jtframe_mist #(parameter
     output   [3:0]  game_coin,
     output   [3:0]  game_start,
     output          game_service,
-    output  [15:0]  joystick_analog_0,
-    output  [15:0]  joystick_analog_1,
+    output  [15:0]  joyana1,
+    output  [15:0]  joyana2,
     // DIP and OSD settings
     output          enable_fm,
     output          enable_psg,
@@ -160,6 +159,7 @@ wire [7:0]    scan2x_r, scan2x_g, scan2x_b;
 wire          scan2x_hs, scan2x_vs, scan2x_clk;
 wire          scan2x_enb;
 wire [6:0]    core_mod;
+wire [3:0]    but_start, but_coin;
 
 wire  [ 1:0]  rotate;
 wire          ioctl_cheat, sdram_init;
@@ -167,8 +167,8 @@ wire          ioctl_cheat, sdram_init;
 assign board_status = { {32-DIPBASE{1'b0}}, status[DIPBASE-1:0] };
 
 jtframe_mist_base #(
-    .SIGNED_SND  (SIGNED_SND        ),
-    .COLORW      ( COLORW           )
+    .SIGNED_SND     ( SIGNED_SND    ),
+    .COLORW         ( COLORW        )
 ) u_base(
     .rst            ( rst           ),
     .sdram_init     ( sdram_init    ),
@@ -219,17 +219,20 @@ jtframe_mist_base #(
     .joystick2      ( joystick2     ),
     .joystick3      ( joystick3     ),
     .joystick4      ( joystick4     ),
+    .but_start      ( but_start     ),
+    .but_coin       ( but_coin      ),
     // Analog joystick
-    .joystick_analog_0( joystick_analog_0   ),
-    .joystick_analog_1( joystick_analog_1   ),
+    .joystick_analog_0( joyana1     ),
+    .joystick_analog_1( joyana2     ),
     // Keyboard
     .ps2_kbd_clk    ( ps2_clk       ),
     .ps2_kbd_data   ( ps2_dout      ),
     // Direct joystick connection (Neptuno / MC)
-    .JOY_CLK        ( JOY_CLK       ),
-    .JOY_LOAD       ( JOY_LOAD      ),
-    .JOY_DATA       ( JOY_DATA      ),
+    .joy1_bus       ( joy1_bus      ),
+    .joy2_bus       ( joy2_bus      ),
     .JOY_SELECT     ( JOY_SELECT    ),
+    // MC2(+) buttons
+    .BUTTON_n       ( BUTTON_n      ),
     // audio
     .clk_dac        ( clk_sys       ),
     .snd_left       ( snd_left      ),
@@ -238,8 +241,8 @@ jtframe_mist_base #(
     .snd_pwm_right  ( AUDIO_R       ),
     // ROM load from SPI
     .ioctl_addr     ( ioctl_addr    ),
-    .ioctl_data     ( ioctl_data    ),
-    .ioctl_data2sd  ( ioctl_data2sd ),
+    .ioctl_dout     ( ioctl_dout    ),
+    .ioctl_din      ( ioctl_din     ),
     .ioctl_wr       ( ioctl_wr      ),
     .ioctl_ram      ( ioctl_ram     ),
     .ioctl_cheat    ( ioctl_cheat   ),
@@ -275,6 +278,8 @@ jtframe_board #(
     .board_joystick2( joystick2[15:0] ),
     .board_joystick3( joystick3[15:0] ),
     .board_joystick4( joystick4[15:0] ),
+    .board_start    ( but_start       ),
+    .board_coin     ( but_coin        ),
     .game_joystick1 ( game_joystick1  ),
     .game_joystick2 ( game_joystick2  ),
     .game_joystick3 ( game_joystick3  ),
@@ -342,7 +347,7 @@ jtframe_board #(
     .cheat      ( status[63:32] ),
     .cheat_prog ( ioctl_cheat   ),
     .ioctl_wr   ( ioctl_wr      ),
-    .ioctl_data ( ioctl_data    ),
+    .ioctl_dout ( ioctl_dout    ),
     .ioctl_addr ( ioctl_addr[7:0]),
     .st_addr    ( st_addr       ),
     .st_dout    ( st_dout       ),
