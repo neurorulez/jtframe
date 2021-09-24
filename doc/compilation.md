@@ -32,6 +32,8 @@ That should produce the MiST output. If you have a fresh linux installation, you
 * Now go to the `core-folder` and run `source setprj.sh`
 * Now you can compile the core using the `jtcore` script.
 
+The output file is stored in **releases/target** where target stands for the FPGA platform (mist, mister, etc.). Most platforms use files with a .rbf extension, but some use a different extension -though the underlying file type is the same.
+
 ## jtcore
 
 jtcore is the script used to compile the cores. It does a lot of stuff and it does it very well. Taking as an example the [CPS0 games](https://github.com/jotego/jt_gng), these are some commands:

@@ -22,7 +22,7 @@ module test_harness(
     output           downloading,
     input            dwnld_busy,
     output    [24:0] ioctl_addr,
-    output    [ 7:0] ioctl_data,
+    output    [ 7:0] ioctl_dout,
     output           ioctl_wr,
     // Video dumping
     input             HS,
@@ -123,7 +123,7 @@ generate
             // ROM-load interface
             .downloading    ( downloading   ),
             .prog_addr      ( ioctl_addr    ),
-            .prog_data      ( ioctl_data    ),
+            .prog_data      ( ioctl_dout    ),
             .prog_we        ( ioctl_wr      ),
             .sdram_addr     ( sdram_addr    ),
             // SDRAM interface
@@ -223,7 +223,7 @@ mt48lc16m16a2 #(.filename(GAME_ROMNAME)) u_sdram (
         localparam DWNLEN = 256;
     `endif
 `else
-    localparam DWNLEN = 0;
+    localparam DWNLEN = 32;
 `endif
 
 spitx #(.filename(GAME_ROMNAME), .TX_LEN(DWNLEN) )
@@ -250,7 +250,7 @@ data_io datain (
     .ioctl_index    (             ),
     .clk_sys        (SDRAM_CLK    ),
     .ioctl_addr     ( ioctl_addr  ),
-    .ioctl_dout     ( ioctl_data  ),
+    .ioctl_dout     ( ioctl_dout  ),
     .ioctl_din      (             ),
     .ioctl_wr       ( ioctl_wr    ),
     // unused

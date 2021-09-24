@@ -44,6 +44,18 @@ module tv80_reg (/*AUTOARG*/
   reg [7:0] RegsH [0:7];
   reg [7:0] RegsL [0:7];
 
+  `ifdef SIMULATION
+  // This is sometimes needed to avoid X's in simulation
+  // Like the start up of Altered Beast
+  integer aux;
+  initial begin
+    for( aux=0; aux<8; aux=aux+1) begin
+        RegsH[aux]=0;
+        RegsL[aux]=0;
+    end
+  end
+  `endif
+
   always @(posedge clk)
     begin
       if (CEN)

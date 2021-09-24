@@ -29,6 +29,8 @@ module jtframe_inputs(
     input      [15:0] board_joy2,
     input      [15:0] board_joy3,
     input      [15:0] board_joy4,
+    input       [3:0] board_coin,
+    input       [3:0] board_start,
 
     input       [9:0] key_joy1,
     input       [9:0] key_joy2,
@@ -36,6 +38,7 @@ module jtframe_inputs(
     input       [3:0] key_start,
     input       [3:0] key_coin,
     input             key_service,
+    input             key_test,
 
     input             key_pause,
     input             osd_pause,
@@ -49,6 +52,7 @@ module jtframe_inputs(
     output reg [3:0]  game_coin,
     output reg [3:0]  game_start,
     output reg        game_service,
+    output            game_test,
     input             lock, // disable joystick inputs
 
     // For simulation only
@@ -141,6 +145,9 @@ endfunction
             frame_cnt <= 0;
         else frame_cnt <= frame_cnt+1;
     end
+    assign game_test = sim_inputs[frame_cnt][10];
+`else
+    assign game_test = key_test;
 `endif
 
 always @(posedge clk) begin
@@ -165,11 +172,11 @@ always @(posedge clk) begin
         game_joy1 <= apply_rotation(joy1_sync | key_joy1, rot_control, ~dip_flip );
         game_coin      <= {4{ACTIVE_LOW[0]}} ^
             ({  joy4_sync[COIN_BIT],joy3_sync[COIN_BIT],
-                joy2_sync[COIN_BIT],joy1_sync[COIN_BIT]} | key_coin);
+                joy2_sync[COIN_BIT],joy1_sync[COIN_BIT]} | key_coin | board_coin );
 
         game_start     <= {4{ACTIVE_LOW[0]}} ^
             ({  joy4_sync[START_BIT],joy3_sync[START_BIT],
-                joy2_sync[START_BIT],joy1_sync[START_BIT]} | key_start);
+                joy2_sync[START_BIT],joy1_sync[START_BIT]} | key_start | board_start );
         `endif
         game_joy2 <= apply_rotation(joy2_sync | key_joy2, rot_control, ~dip_flip );
         game_joy3 <= apply_rotation(joy3_sync | key_joy3, rot_control, ~dip_flip );

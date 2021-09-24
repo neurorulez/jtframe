@@ -27,18 +27,26 @@
     will not be recovered as it is identified as legitim wait
     in the original system
 
-    BUSn -and not just ASn- must be used so read-modify-write
+    DSn -and not just ASn- must be used so read-modify-write
     instructions have a second /DTACK signal generated for
     the write cycle
 
-    Note that if jtframe_ramrq is used, then BUSn must also
+    Note that if jtframe_ramrq is used, then DSn must also
     gate the SDRAM requests so you get a cs toggle in the
     middle of the read-modify-write cycles
+
+    DSn goes low one cycle after ASn under some conditions, so
+    if ASn | DSn is used to set DTACKn, it will take one more
+    cycle than expected on those occasions. Both CPS and S16
+    use only ASn to generate DTACKn.
 
 */
 
 module jtframe_68kdtack
-#(parameter W=5
+#(parameter W=5,
+            RECOVERY=1,
+            WD=6,
+            MFREQ=48_000  // clk input frequency in kHz
 )(
     input         rst,
     input         clk,
@@ -47,25 +55,32 @@ module jtframe_68kdtack
     input         bus_cs,
     input         bus_busy,
     input         bus_legit,
-    input         BUSn,   // BUSn = ASn | (LDSn & UDSn)
+    input         ASn,  // DTACKn set low at the next cpu_cen after ASn goes low
+    input [1:0]   DSn,  // If DSn goes high, DTACKn is reset high
     input [W-1:0] num,  // numerator
     input [W-1:0] den,  // denominator
 
-    output reg  DTACKn
+    output reg    DTACKn,
+    output reg [15:0] fave, // average cpu_cen frequency in kHz
+    output reg [15:0] fworst, // average cpu_cen frequency in kHz
+    input             frst
 );
 
-localparam CW=W+6;
+localparam CW=W+WD;
 
 reg [CW-1:0] cencnt=0;
-reg wait1, halt;
-wire over = cencnt>=den-1;
+reg wait1, halt, aux;
+wire over = (cencnt>den-num)
+            && !cpu_cen && !aux && (!halt || RECOVERY==0);
+reg  DSnl;
+wire DSn_posedge = &DSn & ~DSnl;
 
 `ifdef SIMULATION
 real rnum = num;
 real rden = den;
 initial begin
-    if( rnum/rden<=3 ) begin
-        $display("Error: den must be 3 or more, otherwise recovery won't work (%m)");
+    if( rnum/rden<=4 ) begin
+        $display("Error: num/den must be 4 or more, otherwise recovery won't work (%m)");
         $finish;
     end
 end
@@ -77,13 +92,14 @@ always @(posedge clk, posedge rst) begin : dtack_gen
         wait1  <= 1;
         halt   <= 0;
     end else begin
-        if( BUSn ) begin // DSn is needed for read-modify-write cycles
+        DSnl <= &DSn;
+        if( ASn || DSn_posedge ) begin // DSn is needed for read-modify-write cycles
             DTACKn <= 1;
             wait1  <= 1;
             halt   <= 0;
-        end else if( !BUSn ) begin
+        end else if( !ASn ) begin
             if( cpu_cen  ) wait1 <= 0;
-            if( !wait1 ) begin
+            if( !wait1 || cpu_cen ) begin
                 if( !bus_cs || (bus_cs && !bus_busy) ) begin
                     DTACKn <= 0;
                     halt <= 0;
@@ -96,14 +112,31 @@ always @(posedge clk, posedge rst) begin : dtack_gen
 end
 
 always @(posedge clk) begin
-    cencnt  <= (over && !cpu_cen && !halt) ? (cencnt+num-den) : (cencnt+num);
+    cencnt  <= over ? (cencnt+num-den) : (cencnt+num);
     if( halt ) begin
         cpu_cen  <= 0;
         cpu_cenb <= 0;
     end else begin
         cpu_cen <= over ? ~cpu_cen : 0;
-        cpu_cenb<= cpu_cen;
+        aux <= cpu_cen;
+        cpu_cenb<= aux;
     end
+end
+
+// Frequency reporting
+reg [15:0] freq_cnt=0, fout_cnt;
+initial fworst = 16'hffff;
+
+always @(posedge clk) begin
+    freq_cnt <= freq_cnt + 1'd1;
+    if(cpu_cen) fout_cnt<=fout_cnt+1'd1;
+    if( freq_cnt == MFREQ-1 ) begin
+        freq_cnt <= 0;
+        fout_cnt <= 0;
+        fave <= fout_cnt;
+        if( fworst > fout_cnt ) fworst <= fout_cnt;
+    end
+    if( frst ) fworst <= 16'hffff;
 end
 
 endmodule

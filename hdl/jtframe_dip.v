@@ -36,7 +36,7 @@ module jtframe_dip(
     output reg         enable_psg,
     output             osd_pause,
 
-    input              key_test,
+    input              game_test,
     output             dip_test,
     // non standard:
     output reg         dip_pause,
@@ -86,22 +86,13 @@ assign dip_flip    = ~status[1]^MISTER[0];
         `ifdef DIP_TEST
         assign dip_test = 0;
         `else
-        assign dip_test = 1;
+        assign dip_test = ~game_test;
         `endif
-        //reg test_aux=1;
-        //assign dip_test = test_aux;
-        //initial begin
-        //    #(20*16000000) $display("test... 20\n");
-        //    #(20*16000000) $display("test... 40\n");
-        //    #(20*16000000) $display("test... 60\n");
-        //    #(20*16000000) $display("test... 80\n");
-        //    test_aux = 0;
-        //end
     `else
-        assign dip_test = ~(status[10] | key_test); // assumes it is always active low
+        assign dip_test = ~(status[10] | game_test); // assumes it is always active low
     `endif
 `else
-assign dip_test = ~key_test;
+assign dip_test = ~game_test;
 `endif
 
 wire [1:0] ar = status[15:14];    // only MiSTer
