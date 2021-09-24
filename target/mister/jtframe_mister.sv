@@ -29,7 +29,7 @@ module jtframe_mister #(parameter
     input           clk_pico,
     input           pll_locked,
     // interface with microcontroller
-    output [31:0]   status,
+    output [63:0]   status,
     inout  [45:0]   HPS_BUS,
     output [ 1:0]   buttons,
     // LED
@@ -196,7 +196,7 @@ wire        joydb_1ena,joydb_2ena;
 joydbmix joydbmix
 (
   .CLK_JOY(CLK_JOY),
-  .JOY_FLAG(status[22:20]),
+  .JOY_FLAG(status[63:61]),
   .USER_IN(USER_IN),
   .USER_OUT(USER_OUT),
   .USER_MODE(USER_MODE),
