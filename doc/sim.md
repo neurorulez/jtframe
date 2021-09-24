@@ -3,17 +3,19 @@ You can use a hex file with inputs for simulation. Enable this with the macro
 SIM_INPUTS. The file must be called sim_inputs.hex. Each line has a hexadecimal
 number with inputs coded. Active high only:
 
-bit         meaning
-0           coin 1
-1           coin 2
-2           1P start
-3           2P start
-4           right   (may vary with each game)
-5           left    (may vary with each game)
-6           down    (may vary with each game)
-7           up      (may vary with each game)
-8           Button 1
-9           Button 2
+bit    |    meaning
+-------|-------------
+0      |    coin 1
+1      |    coin 2
+2      |    1P start
+3      |    2P start
+4      |    right   (may vary with each game)
+5      |    left    (may vary with each game)
+6      |    down    (may vary with each game)
+7      |    up      (may vary with each game)
+8      |    Button 1
+9      |    Button 2
+10     |    Test button
 
 Each line will be applied on a new frame.
 

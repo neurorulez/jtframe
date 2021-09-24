@@ -37,10 +37,11 @@ module jtframe_8751mcu(
     output [ 7:0] p3_o,
 
     // external memory
-    input  [ 7:0] x_din,
-    output [ 7:0] x_dout,
-    output [15:0] x_addr,
-    output        x_wr,
+    input      [ 7:0] x_din,
+    output reg [ 7:0] x_dout,
+    output reg [15:0] x_addr,
+    output reg        x_wr,
+    output reg        x_acc,
 
     // ROM programming
     input         clk_rom,
@@ -49,16 +50,14 @@ module jtframe_8751mcu(
     input         prom_we
 );
 
-parameter ROMBIN="";
+parameter ROMBIN="",
+          SINC_XDATA = 0;
 
 wire [ 7:0] rom_data, ram_data, ram_q;
-wire [15:0] rom_addr;
+reg  [15:0] rom_addr;
 wire [ 6:0] ram_addr;
 wire        ram_we;
 reg  [ 7:0] xin_sync, p0_s, p1_s, p2_s, p3_s;   // input data must be sampled with cen
-
-// The memory is expected to suffer cen for both reads and writes
-wire clkx = clk & cen;
 
 always @(posedge clk) if(cen) begin
     xin_sync <= x_din;
@@ -67,10 +66,6 @@ always @(posedge clk) if(cen) begin
     p2_s     <= p2_i;
     p3_s     <= p3_i;
 end
-
-reg [11:0] rom_acen;
-
-always @(posedge clk) if( cen ) rom_acen <= rom_addr[11:0];
 
 // You need to clock gate for reading or the MCU won't work
 jtframe_dual_ram_cen #(.aw(12),.simfile(ROMBIN)) u_prom(
@@ -99,13 +94,25 @@ jtframe_ram #(.aw(7),.cen_rd(1)) u_ramu(
     .q          ( ram_q             )
 );
 
+wire [ 7:0] pre_dout;
+wire [15:0] pre_addr, pre_rom;
+wire        pre_wr, pre_acc;
+
+always @(posedge clk) begin
+    x_addr   <= pre_addr;
+    x_wr     <= pre_wr;
+    x_dout   <= pre_dout;
+    x_acc    <= pre_acc;
+    rom_addr <= pre_rom;
+end
+
 mc8051_core u_mcu(
     .reset      ( rst       ),
     .clk        ( clk       ),
     .cen        ( cen       ),
     // code ROM
     .rom_data_i ( rom_data  ),
-    .rom_adr_o  ( rom_addr  ),
+    .rom_adr_o  ( pre_rom   ),
     // internal RAM
     .ram_data_i ( ram_q     ),
     .ram_data_o ( ram_data  ),
@@ -113,10 +120,11 @@ mc8051_core u_mcu(
     .ram_wr_o   ( ram_we    ),
     .ram_en_o   (           ),
     // external memory: connected to main CPU
-    .datax_i    ( x_din     ),
-    .datax_o    ( x_dout    ),
-    .adrx_o     ( x_addr    ),
-    .wrx_o      ( x_wr      ),
+    .datax_i    ( SINC_XDATA ? xin_sync : x_din ),
+    .datax_o    ( pre_dout  ),
+    .adrx_o     ( pre_addr  ),
+    .wrx_o      ( pre_wr    ),
+    .memx_o     ( pre_acc   ),
     // interrupts
     .int0_i     ( int0n     ),
     .int1_i     ( int1n     ),
