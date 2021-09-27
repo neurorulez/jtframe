@@ -279,7 +279,7 @@ assign clk_pico = clk48;
 
 ///////////////////////////////////////////////////
 
-wire [31:0] status;
+wire [63:0] status;
 wire [ 1:0] buttons, game_led;
 
 wire [ 1:0] dip_fxlevel;
