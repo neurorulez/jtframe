@@ -80,7 +80,7 @@ A sample I/O code can be seen [here](https://gitlab.com/victor.trucco/Multicore/
 
 NeptUNO has a 2MB SRAM module too, which JTFRAME does not support.
 
-### Button Assignments
+### Gamepad Button Assignments
 
 [../hdl/neptuno/jtframe_neptuno_io.v](The Neptuno I/O) module expects a Megadrive DB9 controller to work. Special inputs:
 
@@ -91,3 +91,16 @@ A       | Functions as enter in the OSD
 Start+B | Press during 2 seconds to toggle the scan doubler*
 
 * Not implemented yet
+
+## Multicore 2(+)
+
+The MC2 and MC2+ platforms have four buttons, whose functions are expected to be:
+
+Button   |  OSD       | Arcade
+---------|------------|--------
+0        | up         | 1P
+1        | enter      | 2P
+2        | down       | coin
+3        | open/close | Hold for reset
+
+The arcade functions are not supported.

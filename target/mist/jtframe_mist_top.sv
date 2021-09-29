@@ -68,12 +68,11 @@ wire          rst, rst_n, clk_sys, clk_rom, clk6, clk24, clk48, clk96;
 wire [63:0]   status;
 wire [31:0]   joystick1, joystick2;
 wire [24:0]   ioctl_addr;
-wire [ 7:0]   ioctl_data;
-wire [ 7:0]   ioctl_data2sd;
+wire [ 7:0]   ioctl_dout, ioctl_din;
 wire          ioctl_wr;
 wire          ioctl_ram;
 
-wire [15:0]   joystick_analog_0, joystick_analog_1;
+wire [15:0]   joyana1, joyana2;
 
 wire rst_req   = status[0];
 
@@ -125,9 +124,14 @@ assign snd_right = snd_left;
 `endif
 
 `ifndef JTFRAME_SDRAM_BANKS
-assign prog_data = {2{prog_data8}};
-assign ba_rd[3:1] = 0;
-assign ba_wr      = 0;
+    assign prog_data = {2{prog_data8}};
+    assign ba_rd[3:1] = 0;
+    assign ba_wr      = 0;
+    assign prog_ba    = 0;
+    // tie down unused bank signals
+    assign ba1_addr   = 0;
+    assign ba2_addr   = 0;
+    assign ba3_addr   = 0;
 `endif
 
 jtframe_mist_clocks u_clocks(
@@ -266,8 +270,8 @@ u_frame(
 
     // ROM load
     .ioctl_addr     ( ioctl_addr     ),
-    .ioctl_data     ( ioctl_data     ),
-    .ioctl_data2sd  ( ioctl_data2sd  ),
+    .ioctl_dout     ( ioctl_dout     ),
+    .ioctl_din      ( ioctl_din      ),
     .ioctl_wr       ( ioctl_wr       ),
     .ioctl_ram      ( ioctl_ram      ),
 
@@ -295,9 +299,16 @@ u_frame(
     .game_coin      ( game_coin      ),
     .game_start     ( game_start     ),
     .game_service   ( game_service   ),
-    .joystick_analog_0( joystick_analog_0 ),
-    .joystick_analog_1( joystick_analog_1 ),
+    .joyana1        ( joyana1        ),
+    .joyana2        ( joyana2        ),
     .LED            ( LED            ),
+    // Unused in MiST
+    .BUTTON_n       ( 4'hf           ),
+    .ps2_clk        (                ),
+    .ps2_dout       (                ),
+    .joy1_bus       (                ),
+    .joy2_bus       (                ),
+    .JOY_SELECT     (                ),
     // DIP and OSD settings
     .enable_fm      ( enable_fm      ),
     .enable_psg     ( enable_psg     ),
@@ -381,17 +392,19 @@ u_game(
     // LED
     .game_led    ( game_led[0]    ),
 
-    .start_button( game_start[STARTW-1:0]      ),
-    .coin_input  ( game_coin[STARTW-1:0]       ),
-    .joystick1   ( game_joy1[BUTTONS+3:0]      ),
-    .joystick2   ( game_joy2[BUTTONS+3:0]      ),
+    .start_button( game_start[STARTW-1:0] ),
+    .coin_input  ( game_coin[STARTW-1:0]  ),
+    .joystick1   ( game_joy1[BUTTONS+3:0] ),
+    .joystick2   ( game_joy2[BUTTONS+3:0] ),
     `ifdef JTFRAME_4PLAYERS
-    .joystick3   ( game_joy3[BUTTONS+3:0]      ),
-    .joystick4   ( game_joy4[BUTTONS+3:0]      ),
+    .joystick3   ( game_joy3[BUTTONS+3:0] ),
+    .joystick4   ( game_joy4[BUTTONS+3:0] ),
     `endif
     `ifdef JTFRAME_ANALOG
-    .joyana1     ( joystick_analog_0   ),
-    .joyana2     ( joystick_analog_1   ),
+    .joyana1     ( joyana1        ),
+    .joyana2     ( joyana2        ),
+    .joyana3     ( 16'h0          ),
+    .joyana4     ( 16'h0          ),
     `endif
 
     // Sound control
@@ -399,11 +412,11 @@ u_game(
     .enable_psg  ( enable_psg     ),
     // PROM programming
     .ioctl_addr  ( ioctl_addr     ),
-    .ioctl_data  ( ioctl_data     ),
+    .ioctl_dout  ( ioctl_dout     ),
     .ioctl_wr    ( ioctl_wr       ),
-`ifdef CORE_NVRAM_SIZE
+`ifdef JTFRAME_IOCTL_RD
     .ioctl_ram   ( ioctl_ram      ),
-    .ioctl_data2sd(ioctl_data2sd  ),
+    .ioctl_din   ( ioctl_din      ),
 `endif
     // ROM load
     .downloading ( downloading    ),
@@ -472,18 +485,6 @@ u_game(
     ,.debug_bus   ( debug_bus      )
     `endif
 );
-
-`ifndef JTFRAME_SDRAM_BANKS
-    assign ba0_wr    = 1'b0;
-    assign prog_ba   = 2'd0;
-    // tie down unused bank signals
-    assign ba1_addr = 22'd0;
-    assign ba1_rd   = 0;
-    assign ba2_addr = 22'd0;
-    assign ba2_ack  = 0;
-    assign ba3_addr = 22'd0;
-    assign ba3_rd   = 0;
-`endif
 
 `ifdef SIMULATION
 integer fsnd;
