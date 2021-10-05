@@ -28,7 +28,9 @@ module jtframe_68kdma #(parameter BW=1)(
     input [BW-1:0] dev_br      // high to signal a bus request from a device
 );
 
-always @(posedge clk, posedge rst)
+// using asynchronous reset will cause Altera FPGAs
+// to invert the signals as it can only reset but not preset
+always @(posedge clk)
     if( rst ) begin
         cpu_BRn    <= 1'b1;
         cpu_BGACKn <= 1'b1;
@@ -39,7 +41,7 @@ always @(posedge clk, posedge rst)
                     cpu_BRn <= 1'b0;                    
                 end
             2'b10: begin // bus granted
-                if( cpu_ASn /*&& cpu_DTACKn*/ ) cpu_BGACKn <= 1'b0;
+                if( cpu_ASn && cpu_DTACKn ) cpu_BGACKn <= 1'b0;
             end
             2'b0?: begin // bus held by the device
                 cpu_BRn  <= 1'b1;

@@ -8,6 +8,7 @@ For I/O (SDRAM download, etc.) the following indexes are used
  JTFRAME options  |   1    |    1
  NVRAM            | 255    |    2
  Cheat ROM        |  16    |   16
+ Beta keys        |  N/A   |   17
  DIP switches     |  N/A   |  254
  Cheat switches   |  N/A   |  255
 
@@ -17,6 +18,8 @@ Bit    |  Use
 -------|---------
 0      | High for vertical games
 1      | 4-way joysticks
+
+If JTFRAME_VERTICAL is defined, bit 0 is set during power up. The contents of core_mod can be set by defining a index=1 rom in the MRA file.
 
 ## Automatic SDRAM Dump
 

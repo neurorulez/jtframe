@@ -37,10 +37,11 @@ module jtframe_8751mcu(
     output [ 7:0] p3_o,
 
     // external memory
-    input  [ 7:0] x_din,
-    output [ 7:0] x_dout,
-    output [15:0] x_addr,
-    output        x_wr,
+    input      [ 7:0] x_din,
+    output reg [ 7:0] x_dout,
+    output reg [15:0] x_addr,
+    output reg        x_wr,
+    output reg        x_acc,
 
     // ROM programming
     input         clk_rom,
@@ -49,18 +50,23 @@ module jtframe_8751mcu(
     input         prom_we
 );
 
-parameter ROMBIN="";
+parameter ROMBIN="",
+          SYNC_XDATA = 0,
+          SYNC_INT = 0,
+          SYNC_P0 = 0,
+          SYNC_P1 = 0,
+          SYNC_P2 = 0,
+          SYNC_P3 = 0,
+          DIVCEN = 0; // Divide the input cen by 12
 
 wire [ 7:0] rom_data, ram_data, ram_q;
-wire [15:0] rom_addr;
+reg  [15:0] rom_addr;
 wire [ 6:0] ram_addr;
 wire        ram_we;
 reg  [ 7:0] xin_sync, p0_s, p1_s, p2_s, p3_s;   // input data must be sampled with cen
+wire        cen_eff;
 
-// The memory is expected to suffer cen for both reads and writes
-wire clkx = clk & cen;
-
-always @(posedge clk) if(cen) begin
+always @(posedge clk) if(cen_eff) begin
     xin_sync <= x_din;
     p0_s     <= p0_i;
     p1_s     <= p1_i;
@@ -68,16 +74,34 @@ always @(posedge clk) if(cen) begin
     p3_s     <= p3_i;
 end
 
-reg [11:0] rom_acen;
+// Optional clock-enable divider by 12
+// as Oregano's MCU seem to be about
+// 12x faster
+reg [3:0] divcencnt=0;
+reg       cen0;
 
-always @(posedge clk) if( cen ) rom_acen <= rom_addr[11:0];
+always @(posedge clk) begin
+    if(cen)
+        divcencnt <= divcencnt==11 ? 0 : divcencnt+1'd1;
+    cen0 <= divcencnt==1 && cen==1;
+end
+
+assign cen_eff = DIVCEN ? cen0 : cen;
+
+wire int0n_s, int1n_s;
+
+jtframe_sync #(.W(2)) u_sync(
+    .clk    (   clk               ),
+    .raw    ( {int1n, int0n }     ),
+    .sync   ( {int1n_s, int0n_s } )
+);
 
 // You need to clock gate for reading or the MCU won't work
 jtframe_dual_ram_cen #(.aw(12),.simfile(ROMBIN)) u_prom(
     .clk0   ( clk_rom   ),
     .cen0   ( 1'b1      ),
     .clk1   ( clk       ),
-    .cen1   ( cen       ),
+    .cen1   ( cen_eff   ),
     // Port 0
     .data0  ( prom_din  ),
     .addr0  ( prog_addr ),
@@ -92,20 +116,32 @@ jtframe_dual_ram_cen #(.aw(12),.simfile(ROMBIN)) u_prom(
 
 jtframe_ram #(.aw(7),.cen_rd(1)) u_ramu(
     .clk        ( clk               ),
-    .cen        ( cen               ),
+    .cen        ( cen_eff           ),
     .addr       ( ram_addr          ),
     .data       ( ram_data          ),
     .we         ( ram_we            ),
     .q          ( ram_q             )
 );
 
+wire [ 7:0] pre_dout;
+wire [15:0] pre_addr, pre_rom;
+wire        pre_wr, pre_acc;
+
+always @(posedge clk) begin
+    x_addr   <= pre_addr;
+    x_wr     <= pre_wr;
+    x_dout   <= pre_dout;
+    x_acc    <= pre_acc;
+    rom_addr <= pre_rom;
+end
+
 mc8051_core u_mcu(
     .reset      ( rst       ),
     .clk        ( clk       ),
-    .cen        ( cen       ),
+    .cen        ( cen_eff   ),
     // code ROM
     .rom_data_i ( rom_data  ),
-    .rom_adr_o  ( rom_addr  ),
+    .rom_adr_o  ( pre_rom   ),
     // internal RAM
     .ram_data_i ( ram_q     ),
     .ram_data_o ( ram_data  ),
@@ -113,30 +149,32 @@ mc8051_core u_mcu(
     .ram_wr_o   ( ram_we    ),
     .ram_en_o   (           ),
     // external memory: connected to main CPU
-    .datax_i    ( x_din     ),
-    .datax_o    ( x_dout    ),
-    .adrx_o     ( x_addr    ),
-    .wrx_o      ( x_wr      ),
+    .datax_i    ( SYNC_XDATA ? xin_sync : x_din ),
+    .datax_o    ( pre_dout  ),
+    .adrx_o     ( pre_addr  ),
+    .wrx_o      ( pre_wr    ),
+    .memx_o     ( pre_acc   ),
     // interrupts
-    .int0_i     ( int0n     ),
-    .int1_i     ( int1n     ),
+    .int0_i     ( SYNC_INT ? int0n_s : int0n ),
+    .int1_i     ( SYNC_INT ? int1n_s : int1n ),
     // counters
     .all_t0_i   ( 1'b0      ),
     .all_t1_i   ( 1'b0      ),
     // serial interface
     .all_rxd_i  ( 1'b0      ),
     .all_rxd_o  (           ),
+    .all_rxdwr_o(           ),
     // Ports
-    .p0_i       ( p0_i      ),
+    .p0_i       ( SYNC_P0 ? p0_s : p0_i ),
     .p0_o       ( p0_o      ),
 
-    .p1_i       ( p1_i      ),
+    .p1_i       ( SYNC_P1 ? p1_s : p1_i ),
     .p1_o       ( p1_o      ),
 
-    .p2_i       ( p2_i      ),
+    .p2_i       ( SYNC_P2 ? p2_s : p2_i ),
     .p2_o       ( p2_o      ),
 
-    .p3_i       ( p3_i      ),
+    .p3_i       ( SYNC_P3 ? p3_s : p3_i ),
     .p3_o       ( p3_o      )
 );
 

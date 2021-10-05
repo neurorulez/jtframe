@@ -53,6 +53,7 @@ module jtframe_mister_dwnld(
     output reg        ioctl_rom_wr,
     output reg        ioctl_ram,
     output reg        ioctl_cheat,
+    output reg        ioctl_lock,
     output reg [26:0] ioctl_addr,
     output reg [ 7:0] ioctl_dout,
 
@@ -75,17 +76,23 @@ localparam [7:0] IDX_ROM          = 8'h0,
                  IDX_MOD          = 8'h1,
                  IDX_NVRAM        = 8'h2,
                  IDX_CHEAT        = 8'h10,
+                 IDX_LOCK         = 8'h11,
                  IDX_DIPSW        = 8'd254,
                  IDX_CHEAT_STATUS = 8'd255;
 
 always @(posedge clk) begin
     ioctl_ram   <= hps_download && hps_index==IDX_NVRAM;
     ioctl_cheat <= hps_download && hps_index==IDX_CHEAT;
+    ioctl_lock  <= hps_download && hps_index==IDX_LOCK;
 end
 
 always @(posedge clk, posedge rst) begin
     if( rst ) begin
-        core_mod <= 7'b01; // see readme file for documentation on each bit
+        `ifdef JTFRAME_VERTICAL
+            core_mod <= 7'b01; // see doc/sdram.md file for documentation on each bit
+        `else
+            core_mod <= 7'b00;
+        `endif
     end else begin
         // The hps_addr[0]==1'b0 condition is needed in case JTFRAME_MR_FASTIO is enabled
         // as it always creates two write events and the second would delete the data of the first

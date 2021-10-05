@@ -129,7 +129,8 @@ module jtframe_board #(parameter
     input             direct_video,
 
     // ROM downloading (cheat engine)
-    input             cheat_prog,
+    input             prog_cheat,
+    input             prog_lock,
     input             ioctl_wr,
     input       [7:0] ioctl_dout,
     input       [7:0] ioctl_addr,
@@ -447,7 +448,8 @@ wire [SDRAMW-1:0] bax_addr;
         .vram_ctrl  ( vram_ctrl ),
 
         // Program
-        .prog_en    ( cheat_prog),
+        .prog_en    ( prog_cheat),
+        .prog_lock  ( prog_lock ),
         .prog_addr  ( ioctl_addr[7:0] ),
         .prog_wr    ( ioctl_wr  ),
         .prog_data  ( ioctl_dout)
@@ -583,6 +585,13 @@ wire              pre2x_LHBL, pre2x_LVBL;
     wire invert_inputs = GAME_INPUTS_ACTIVE_LOW[0];
     wire toggle = |(game_start ^ {4{invert_inputs}});
     wire fast_scroll = |({game_joystick1[2], game_joystick2[2]} ^ {2{invert_inputs}});
+    wire show_credits;
+
+    `ifdef MISTER
+        assign show_credits = ~dip_pause & ~status[12];
+    `else
+        assign show_credits = ~dip_pause;
+    `endif
 
     // To do: HS and VS should actually be delayed inside jtframe_credits too
     jtframe_credits #(
@@ -613,7 +622,7 @@ wire              pre2x_LHBL, pre2x_LVBL;
             .vram_addr  ( vram_addr  ),
             .vram_we    ( vram_we    ),
             .vram_ctrl  ( vram_ctrl  ),
-            .enable     ( vram_ctrl[0] | ~dip_pause ),
+            .enable     ( vram_ctrl[0] | show_credits ),
         `else
             .vram_din   ( 8'h0  ),
             .vram_dout  (       ),
@@ -623,7 +632,7 @@ wire              pre2x_LHBL, pre2x_LVBL;
             `ifdef JTFRAME_CREDITS_AON
                 .enable ( 1'b1          ),
             `else
-                .enable ( ~dip_pause    ),
+                .enable ( show_credits  ),
             `endif
         `endif
 
