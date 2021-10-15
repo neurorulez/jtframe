@@ -162,8 +162,10 @@ wire [3:0] hoffset, voffset;
 ////////////////////   CLOCKS   ///////////////////
 
 wire clk_sys, clk_rom, clk96, clk96sh, clk48, clk48sh, clk24, clk6;
+wire game_rst, game_service, rst, rst_n;
 wire clk_pico;
 wire pxl2_cen, pxl_cen;
+wire rst96, rst48, rst24, rst6;
 wire pll_locked;
 reg  pll_rst = 1'b0;
 
@@ -203,6 +205,30 @@ end
     .outclk_3   ( clk6       ),
     .outclk_4   ( clk96      ),
     .outclk_5   ( clk96sh    )
+);
+
+jtframe_rst_sync u_reset96(
+    .rst        ( game_rst  ),
+    .clk        ( clk96     ),
+    .rst_sync   ( rst96     )
+);
+
+jtframe_rst_sync u_reset48(
+    .rst        ( game_rst  ),
+    .clk        ( clk48     ),
+    .rst_sync   ( rst48     )
+);
+
+jtframe_rst_sync u_reset24(
+    .rst        ( game_rst  ),
+    .clk        ( clk24     ),
+    .rst_sync   ( rst24     )
+);
+
+jtframe_rst_sync u_reset6(
+    .rst        ( game_rst ),
+    .clk        ( clk6     ),
+    .rst_sync   ( rst6     )
 );
 
 `ifdef JTFRAME_SDRAM96
@@ -272,7 +298,6 @@ wire [ 3:0] gfx_en;
 wire [ 7:0] debug_bus;
 wire [15:0] joyana1, joyana2, joyana3, joyana4;
 
-wire        game_rst, game_service, rst, rst_n;
 wire        rst_req   = RESET | status[0] | buttons[1];
 
 assign LED_DISK  = 2'b0;
@@ -545,15 +570,19 @@ end
     .clk          ( clk_rom          ),
 `ifdef JTFRAME_CLK96
     .clk96        ( clk96            ),
+    .rst96        ( rst96            ),
 `endif
 `ifdef JTFRAME_CLK48
     .clk48        ( clk48            ),
+    .rst48        ( rst48            ),
 `endif
 `ifdef JTFRAME_CLK24
     .clk24        ( clk24            ),
+    .rst24        ( rst24            ),
 `endif
 `ifdef JTFRAME_CLK6
     .clk6         ( clk6             ),
+    .rst6         ( rst6             ),
 `endif
     .pxl2_cen     ( pxl2_cen         ),
     .pxl_cen      ( pxl_cen          ),
