@@ -229,6 +229,8 @@ assign joystick2 = 32'd0;
 assign joystick3 = 32'd0;
 assign joystick4 = 32'd0;
 assign status    = 64'd0;
+assign but_coin  = 0;
+assign but_start = 0;
 `ifndef SCANDOUBLER_DISABLE
     `define SCANDOUBLER_DISABLE 1'b1
     initial $display("INFO: Use -d SCANDOUBLER_DISABLE=0 if you want video output.");
@@ -247,7 +249,6 @@ assign ypbpr = 1'b0;
         .SPI_DO             ( SPI_DO            ),
 
         .clk_sys            ( clk_rom           ),
-        .clkref_n           ( 1'b0              ), // this is not a clock.
         .ioctl_download     ( ioctl_download    ),
         .ioctl_addr         ( ioctl_addr        ),
         .ioctl_dout         ( ioctl_dout        ),

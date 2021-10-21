@@ -38,7 +38,7 @@ Status bits in the configuration string are indicated with characters. This is t
 ```
 bit          00000000001111111112222222222233
   number   : 01234567890123456789012345678901
-status char: 0123456789abcdefghijklmnopqrstuv
+status char: 0123456789ABCDEFGHIJKLMNOPQRSTUV
 ```
 
 
@@ -60,11 +60,15 @@ bit     |  meaning                | Enabled with macro
 10      | Test mode               | JTFRAME_OSD_TEST
 11      | Horizontal filter       | MiSTer only
 12      | Credits/Pause           | JTFRAME_OSD_NOCREDITS (disables it)
+13      | Reserved for core use   | CORE_OSD
 14-15   | Aspect Ratio            | MiSTer only, visibility masked
 19      | CRT H scaling enable    | MiSTer only
 20-23   | CRT H scaling factor    | MiSTer only, visibility masked
 24-27   | CRT H offset            | MiSTer only
 28-31   | CRT V offset            | MiSTer only
+56-63   | Reserved for forks      | JTFRAME forks can use these bits%
+
+% JTFRAME will not expand to use bits 56 to 63 in MiSTer, so developers creating custom forks can use them. This can be used to provide custom inputs, for instance.
 
 
 If **JTFRAME_FLIP_RESET** is defined a change in dip_flip will reset the game.
