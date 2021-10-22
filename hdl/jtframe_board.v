@@ -227,6 +227,13 @@ wire   [3:0] key_start, key_coin;
 wire   [3:0] key_gfx;
 wire         key_service;
 wire         lock;
+wire         autofire0;
+
+`ifdef JTFRAME_AUTOFIRE0
+    assign autofire0=status[16];
+`else
+    assign autofire0=0;
+`endif
 
 jtframe_reset u_reset(
     .clk_sys    ( clk_sys       ),
@@ -320,8 +327,10 @@ jtframe_inputs #(
 ) u_inputs(
     .rst            ( rst             ),
     .clk            ( clk_sys         ),
+    .LVBL           ( LVBL            ),
     .downloading    ( downloading     ),
     .dip_flip       ( dip_flip        ),
+    .autofire0      ( autofire0       ),
 
     .soft_rst       ( soft_rst        ),
 
@@ -355,8 +364,7 @@ jtframe_inputs #(
     .lock           ( lock            ),
 
     // Simulation helpers
-    .game_pause     ( game_pause      ),
-    .LVBL           ( LVBL            )
+    .game_pause     ( game_pause      )
 );
 
 jtframe_dip u_dip(
@@ -585,6 +593,13 @@ wire              pre2x_LHBL, pre2x_LVBL;
     wire invert_inputs = GAME_INPUTS_ACTIVE_LOW[0];
     wire toggle = |(game_start ^ {4{invert_inputs}});
     wire fast_scroll = |({game_joystick1[2], game_joystick2[2]} ^ {2{invert_inputs}});
+    wire show_credits;
+
+    `ifdef MISTER
+        assign show_credits = ~dip_pause & ~status[12];
+    `else
+        assign show_credits = ~dip_pause;
+    `endif
 
     // To do: HS and VS should actually be delayed inside jtframe_credits too
     jtframe_credits #(
@@ -615,7 +630,7 @@ wire              pre2x_LHBL, pre2x_LVBL;
             .vram_addr  ( vram_addr  ),
             .vram_we    ( vram_we    ),
             .vram_ctrl  ( vram_ctrl  ),
-            .enable     ( vram_ctrl[0] | ~dip_pause ),
+            .enable     ( vram_ctrl[0] | show_credits ),
         `else
             .vram_din   ( 8'h0  ),
             .vram_dout  (       ),
@@ -625,7 +640,7 @@ wire              pre2x_LHBL, pre2x_LVBL;
             `ifdef JTFRAME_CREDITS_AON
                 .enable ( 1'b1          ),
             `else
-                .enable ( ~dip_pause    ),
+                .enable ( show_credits  ),
             `endif
         `endif
 

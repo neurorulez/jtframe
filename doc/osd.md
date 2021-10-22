@@ -62,11 +62,14 @@ bit     |  meaning                | Enabled with macro
 12      | Credits/Pause           | JTFRAME_OSD_NOCREDITS (disables it)
 13      | Reserved for core use   | CORE_OSD
 14-15   | Aspect Ratio            | MiSTer only, visibility masked
+16      | Autofire button 0       | JTFRAME_AUTOFIRE0
 19      | CRT H scaling enable    | MiSTer only
 20-23   | CRT H scaling factor    | MiSTer only, visibility masked
 24-27   | CRT H offset            | MiSTer only
 28-31   | CRT V offset            | MiSTer only
 56-63   | Reserved for forks      | JTFRAME forks can use these bits%
+
+Credits/Pause are handled differently in MiSTer vs MiST. For MiSTer, bit 12 sets whether credits will be displayed during pause. For MiST, bit 12 sets the pause. This difference is due to MiST missing key mapping, so I assume that MiST users depend more on the OSD for triggering the pause.
 
 % JTFRAME will not expand to use bits 56 to 63 in MiSTer, so developers creating custom forks can use them. This can be used to provide custom inputs, for instance.
 
